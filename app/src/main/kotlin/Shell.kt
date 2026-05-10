@@ -2,6 +2,7 @@ import command.Command
 import command.EchoCommand
 import command.ExitCommand
 import command.ParsedLine
+import command.PwdCommand
 import command.TypeCommand
 import lib.PathUtil
 
@@ -12,6 +13,7 @@ class Shell(
     EchoCommand(),
     ExitCommand(),
     TypeCommand(resolveCommand = ::resolveCommand, pathUtil = pathUtil),
+    PwdCommand(),
   )
 
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
