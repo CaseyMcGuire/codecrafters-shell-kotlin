@@ -2,10 +2,12 @@ package command
 
 import kotlin.system.exitProcess
 
-class ExitCommand : Command {
+class ExitCommand(
+  private val exit: (Int) -> Nothing = ::exitProcess,
+) : Command {
   override val text = "exit"
 
   override fun execute(name: String, args: List<String>): String? {
-    exitProcess(0)
+    exit(0)
   }
 }

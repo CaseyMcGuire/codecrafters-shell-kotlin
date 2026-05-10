@@ -1,3 +1,4 @@
+import lib.PathUtil
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -6,7 +7,7 @@ import kotlin.test.assertSame
 
 class ShellTest {
 
-  private fun shell() = Shell(pathProvider = { System.getenv("PATH").orEmpty() })
+  private fun shell() = Shell(pathUtil = PathUtil())
 
   @Test
   fun `resolveCommand finds known builtin text`() {
