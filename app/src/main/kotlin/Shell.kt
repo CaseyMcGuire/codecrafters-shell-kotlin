@@ -30,7 +30,7 @@ class Shell(
       .start()
     val output = process.inputStream.bufferedReader().readText()
     process.waitFor()
-    return output
+    return output.trimEnd('\n')
   }
 
   fun run() {
