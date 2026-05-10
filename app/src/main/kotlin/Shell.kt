@@ -42,7 +42,7 @@ class Shell(
       else {
         val executable = pathUtil.getExecutablePath(name)
         if (executable != null) {
-          execute(executable, args)
+          execute(name, args)
         }
         else {
           "$name: command not found"
