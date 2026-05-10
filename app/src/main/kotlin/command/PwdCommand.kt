@@ -1,7 +1,7 @@
 package command
 
 class PwdCommand(
-  private val cwdProvider: () -> String = { System.getProperty("user.dir") },
+  private val cwdProvider: () -> String
 ) : Command {
   override val text = "pwd"
 

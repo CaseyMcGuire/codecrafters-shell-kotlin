@@ -12,4 +12,9 @@ class PathUtil(
         val file = File(it)
         file.isFile && file.canExecute()
       }
+
+  fun isValidPath(path: String): Boolean {
+    return File(path).exists()
+  }
+
 }

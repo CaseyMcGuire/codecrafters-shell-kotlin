@@ -1,3 +1,4 @@
+import command.CdCommand
 import command.Command
 import command.EchoCommand
 import command.ExitCommand
@@ -5,15 +6,20 @@ import command.ParsedLine
 import command.PwdCommand
 import command.TypeCommand
 import lib.PathUtil
+import java.io.File
 
 class Shell(
   private val pathUtil: PathUtil = PathUtil(),
+  private val shellState: ShellState = ShellState(),
 ) {
   val builtins: List<Command> = listOf(
     EchoCommand(),
     ExitCommand(),
     TypeCommand(resolveCommand = ::resolveCommand, pathUtil = pathUtil),
-    PwdCommand(),
+    PwdCommand { shellState.currentWorkingDirectory },
+    CdCommand(
+      pathUtil
+    ) { shellState.currentWorkingDirectory = it }
   )
 
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
@@ -28,6 +34,7 @@ class Shell(
 
   fun execute(command: String, args: List<String>): String {
     val process = ProcessBuilder(command, *args.toTypedArray())
+      .directory(File(shellState.currentWorkingDirectory))
       .redirectErrorStream(true)
       .start()
     val output = process.inputStream.bufferedReader().readText()
