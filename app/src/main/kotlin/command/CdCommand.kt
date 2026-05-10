@@ -11,9 +11,12 @@ class CdCommand(
   override val text = "cd"
   override fun execute(name: String, args: List<String>): String? {
     val path = args.firstOrNull()?.let {
-      val proposedPath = if (Path.of(it).isAbsolute) it
-                         else "${shellState.currentWorkingDirectory}/$it"
-      pathUtil.getAdjustedPath(proposedPath)
+      if (Path.of(it).isAbsolute)
+        Path.of(it).normalize().toString()
+      else if (it.startsWith("~/") || it == "~")
+        Path.of(it.replaceFirst("~", shellState.homeDirectory)).normalize().toString()
+      else
+        Path.of(shellState.currentWorkingDirectory).resolve(it).normalize().toString()
     } ?: return null
     if (pathUtil.isValidPath(path)) {
       shellState.currentWorkingDirectory = path
