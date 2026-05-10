@@ -1,9 +1,19 @@
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 class CommandTest {
+
+  @AfterEach
+  fun restorePathProvider() {
+    Command.pathProvider = { System.getenv("PATH").orEmpty() }
+  }
 
   @Test
   fun `echo joins args with single space`() {
@@ -79,5 +89,54 @@ class CommandTest {
   @Test
   fun `type only inspects the first arg`() {
     assertEquals("echo is a shell builtin", Command.TYPE.execute("type", listOf("echo", "exit")))
+  }
+
+  @Test
+  fun `type returns the absolute path for a PATH executable`() {
+    val result = Command.TYPE.execute("type", listOf("ls"))
+    assertNotNull(result, "expected a path for 'ls'")
+    assertTrue(result.endsWith("/ls"), "expected path ending with /ls, got: $result")
+    val file = File(result)
+    assertTrue(file.isFile && file.canExecute(), "$result should be an executable file")
+  }
+
+  @Test
+  fun `type reports not found for a missing executable`() {
+    val name = "definitely_not_a_real_command_${System.nanoTime()}"
+    assertEquals("$name: not found", Command.TYPE.execute("type", listOf(name)))
+  }
+
+  @Test
+  fun `type prefers builtin over PATH executable when names collide`() {
+    // 'echo' exists both as a builtin and as /bin/echo — builtin should win.
+    assertEquals("echo is a shell builtin", Command.TYPE.execute("type", listOf("echo")))
+  }
+
+  @Test
+  fun `type finds executable in injected PATH`(@TempDir dir: File) {
+    val fake = File(dir, "myfakecmd").apply {
+      writeText("#!/bin/sh\n")
+      setExecutable(true)
+    }
+    Command.pathProvider = { dir.absolutePath }
+
+    assertEquals(fake.absolutePath, Command.TYPE.execute("type", listOf("myfakecmd")))
+  }
+
+  @Test
+  fun `type ignores non-executable files in PATH`(@TempDir dir: File) {
+    File(dir, "notexec").apply { writeText("hi") }  // not executable
+    Command.pathProvider = { dir.absolutePath }
+
+    assertEquals("notexec: not found", Command.TYPE.execute("type", listOf("notexec")))
+  }
+
+  @Test
+  fun `type returns first match across multiple PATH dirs`(@TempDir first: File, @TempDir second: File) {
+    val firstHit = File(first, "tool").apply { writeText("#!/bin/sh\n"); setExecutable(true) }
+    File(second, "tool").apply { writeText("#!/bin/sh\n"); setExecutable(true) }
+    Command.pathProvider = { "${first.absolutePath}${File.pathSeparator}${second.absolutePath}" }
+
+    assertEquals(firstHit.absolutePath, Command.TYPE.execute("type", listOf("tool")))
   }
 }
