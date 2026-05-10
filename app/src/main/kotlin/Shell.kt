@@ -18,8 +18,9 @@ class Shell(
     TypeCommand(resolveCommand = ::resolveCommand, pathUtil = pathUtil),
     PwdCommand { shellState.currentWorkingDirectory },
     CdCommand(
-      pathUtil
-    ) { shellState.currentWorkingDirectory = it }
+      pathUtil,
+      shellState
+    )
   )
 
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
