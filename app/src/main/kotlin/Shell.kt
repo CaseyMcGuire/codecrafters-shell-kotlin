@@ -30,11 +30,11 @@ class Shell(
   fun parse(line: String): ParsedLine {
     val tokens = mutableListOf<String>()
     var currentToken = StringBuilder()
-    var inQuotes = false
+    var parseState = ParseState.NONE
     for (char in line) {
       when (char) {
         ' ' -> {
-          if (!inQuotes) {
+          if (parseState == ParseState.NONE) {
             if (currentToken.isNotEmpty()) {
               tokens.add(currentToken.toString())
               currentToken = StringBuilder()
@@ -44,7 +44,20 @@ class Shell(
             currentToken.append(char)
           }
         }
-        '\'' -> inQuotes = !inQuotes
+        '\'' -> {
+          when (parseState) {
+            ParseState.NONE -> parseState = ParseState.OPEN_SINGLE_QUOTE
+            ParseState.OPEN_SINGLE_QUOTE -> parseState = ParseState.NONE
+            else -> currentToken.append(char)
+          }
+        }
+        '"' -> {
+          when (parseState) {
+            ParseState.NONE -> parseState = ParseState.OPEN_DOUBLE_QUOTE
+            ParseState.OPEN_DOUBLE_QUOTE -> parseState = ParseState.NONE
+            else -> currentToken.append(char)
+          }
+        }
         else -> currentToken.append(char)
       }
     }
@@ -82,4 +95,10 @@ class Shell(
       output?.let(::println)
     }
   }
+}
+
+enum class ParseState {
+  NONE,
+  OPEN_DOUBLE_QUOTE,
+  OPEN_SINGLE_QUOTE,
 }
