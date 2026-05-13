@@ -34,7 +34,7 @@ class Shell(
     for (char in line) {
       when (char) {
         ' ' -> {
-          if (inQuotes) {
+          if (!inQuotes) {
             tokens.add(currentToken.toString())
             currentToken = StringBuilder()
           }
