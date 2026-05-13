@@ -28,7 +28,27 @@ class Shell(
   fun resolveCommand(name: String): Command? = byText[name]
 
   fun parse(line: String): ParsedLine {
-    val tokens = line.split(" ").filter { it.isNotBlank() }
+    val tokens = mutableListOf<String>()
+    var currentToken = StringBuilder()
+    var inQuotes = false
+    for (char in line) {
+      when (char) {
+        ' ' -> {
+          if (inQuotes) {
+            tokens.add(currentToken.toString())
+            currentToken = StringBuilder()
+          }
+          else {
+            currentToken.append(char)
+          }
+        }
+        '\'' -> inQuotes = !inQuotes
+        else -> currentToken.append(char)
+      }
+    }
+    if (currentToken.isNotEmpty()) {
+      tokens.add(currentToken.toString())
+    }
     val name = tokens.firstOrNull().orEmpty()
     return ParsedLine(resolveCommand(name), name, tokens.drop(1))
   }
@@ -53,8 +73,7 @@ class Shell(
         val executable = pathUtil.getExecutablePath(name)
         if (executable != null) {
           execute(name, args)
-        }
-        else {
+        } else {
           "$name: command not found"
         }
       }

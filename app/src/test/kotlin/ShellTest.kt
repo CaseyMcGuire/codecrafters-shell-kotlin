@@ -44,4 +44,62 @@ class ShellTest {
     val parsed = shell().parse("echo   a    b")
     assertEquals(listOf("a", "b"), parsed.args)
   }
+
+  @Test
+  fun `parse keeps spaces inside single quotes as part of one arg`() {
+    val parsed = shell().parse("echo 'hello world'")
+    assertEquals("echo", parsed.name)
+    assertEquals(listOf("hello world"), parsed.args)
+  }
+
+  @Test
+  fun `parse preserves repeated whitespace inside single quotes`() {
+    val parsed = shell().parse("echo 'a   b'")
+    assertEquals(listOf("a   b"), parsed.args)
+  }
+
+  @Test
+  fun `parse strips the quote characters from the output`() {
+    val parsed = shell().parse("echo 'hi'")
+    assertEquals(listOf("hi"), parsed.args)
+  }
+
+  @Test
+  fun `parse glues unquoted and quoted runs into a single token`() {
+    val parsed = shell().parse("echo abc'def ghi'jkl")
+    assertEquals(listOf("abcdef ghijkl"), parsed.args)
+  }
+
+  @Test
+  fun `parse handles multiple separate quoted args`() {
+    val parsed = shell().parse("echo 'one two' 'three four'")
+    assertEquals(listOf("one two", "three four"), parsed.args)
+  }
+
+  @Test
+  fun `parse handles back-to-back quoted runs`() {
+    val parsed = shell().parse("echo 'foo''bar'")
+    assertEquals(listOf("foobar"), parsed.args)
+  }
+
+  @Test
+  fun `parse handles an empty quoted string as an empty arg`() {
+    val parsed = shell().parse("echo ''")
+    assertEquals(listOf(""), parsed.args)
+  }
+
+  @Test
+  fun `parse leaves dollar and backslash literal inside single quotes`() {
+    val parsed = shell().parse("echo '\$HOME \\n'")
+    assertEquals(listOf("\$HOME \\n"), parsed.args)
+  }
+
+  @Test
+  fun `parse handles a quoted command name`() {
+    val shell = shell()
+    val parsed = shell.parse("'echo' hi")
+    assertSame(shell.resolveCommand("echo"), parsed.command)
+    assertEquals("echo", parsed.name)
+    assertEquals(listOf("hi"), parsed.args)
+  }
 }
