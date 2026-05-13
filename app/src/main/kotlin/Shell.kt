@@ -35,8 +35,10 @@ class Shell(
       when (char) {
         ' ' -> {
           if (!inQuotes) {
-            tokens.add(currentToken.toString())
-            currentToken = StringBuilder()
+            if (currentToken.isNotEmpty()) {
+              tokens.add(currentToken.toString())
+              currentToken = StringBuilder()
+            }
           }
           else {
             currentToken.append(char)
