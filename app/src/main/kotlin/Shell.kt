@@ -31,8 +31,15 @@ class Shell(
     val tokens = mutableListOf<String>()
     var currentToken = StringBuilder()
     var parseState = ParseState.NONE
+    var isEscaped = false
     for (char in line) {
+      if (isEscaped) {
+        currentToken.append(char)
+        isEscaped = false
+        continue
+      }
       when (char) {
+        '\\' -> isEscaped = true
         ' ' -> {
           if (parseState == ParseState.NONE) {
             if (currentToken.isNotEmpty()) {

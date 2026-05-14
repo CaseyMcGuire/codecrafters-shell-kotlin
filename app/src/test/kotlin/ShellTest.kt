@@ -161,4 +161,44 @@ class ShellTest {
     assertEquals("echo", parsed.name)
     assertEquals(listOf("hi"), parsed.args)
   }
+
+  @Test
+  fun `parse treats each backslash-space as a literal space within one token`() {
+    // input:  echo three\ \ \ spaces
+    // expect: one arg "three   spaces"
+    val parsed = shell().parse("echo three\\ \\ \\ spaces")
+    assertEquals(listOf("three   spaces"), parsed.args)
+  }
+
+  @Test
+  fun `parse keeps escaped space attached but collapses subsequent unescaped spaces`() {
+    // input:  echo before\     after
+    // expect: ["before ", "after"]  (literal trailing space on first; runs of unescaped spaces collapse)
+    val parsed = shell().parse("echo before\\     after")
+    assertEquals(listOf("before ", "after"), parsed.args)
+  }
+
+  @Test
+  fun `parse treats backslash-letter as the literal letter (no escape sequences outside quotes)`() {
+    // input:  echo test\nexample
+    // expect: ["testnexample"]  (\n is just n, not a newline)
+    val parsed = shell().parse("echo test\\nexample")
+    assertEquals(listOf("testnexample"), parsed.args)
+  }
+
+  @Test
+  fun `parse treats double backslash as a single literal backslash`() {
+    // input:  echo hello\\world
+    // expect: ["hello\world"]
+    val parsed = shell().parse("echo hello\\\\world")
+    assertEquals(listOf("hello\\world"), parsed.args)
+  }
+
+  @Test
+  fun `parse treats backslash-quote as a literal quote character that does not open a quoted run`() {
+    // input:  echo \'hello\'
+    // expect: ["'hello'"]
+    val parsed = shell().parse("echo \\'hello\\'")
+    assertEquals(listOf("'hello'"), parsed.args)
+  }
 }
