@@ -39,7 +39,8 @@ class Shell(
         continue
       }
       when (char) {
-        '\\' -> isEscaped = true
+        '\\' -> if (parseState != ParseState.OPEN_SINGLE_QUOTE) isEscaped = true
+                else currentToken.append(char)
         ' ' -> {
           if (parseState == ParseState.NONE) {
             if (currentToken.isNotEmpty()) {
