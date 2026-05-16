@@ -86,17 +86,17 @@ class Shell(
         resolveCommand(name),
         name,
         tokens.drop(1).dropLast(2),
-        OutputDirection.File(tokens.last(), tokens.get(tokens.size - 2) in setOf("1>>", ">>")),
+        OutputDirection.File(tokens.last(), tokens[tokens.size - 2] in setOf("1>>", ">>")),
         OutputDirection.Print
       )
     }
-    else if (tokens.getOrNull(tokens.size - 2) == "2>") {
+    else if (tokens.getOrNull(tokens.size - 2) in setOf("2>", "2>>")) {
       ParsedLine(
         resolveCommand(name),
         name,
         tokens.drop(1).dropLast(2),
         OutputDirection.Print,
-        OutputDirection.File(tokens.last(), false)
+        OutputDirection.File(tokens.last(), tokens[tokens.size - 2] == "2>>")
       )
     }
     else {
@@ -118,28 +118,18 @@ class Shell(
       val result = command?.execute(name, args)
         ?: ExecutionResult(stderr = "$name: command not found")
 
-      when (standardOutDirection) {
-        OutputDirection.Print -> {
-          result.stdout?.let(::println)
-        }
-        is OutputDirection.File -> {
-          val text = result.stdout?.let { it + "\n" } ?: ""
-          val file = File(standardOutDirection.path)
-          if (standardOutDirection.append) file.appendText(text)
-          else file.writeText(text)
-        }
-      }
+      emit(result.stdout, standardOutDirection)
+      emit(result.stderr, standardErrDirection)
+    }
+  }
 
-      when (standardErrDirection) {
-        OutputDirection.Print -> {
-          result.stderr?.let(::println)
-        }
-        is OutputDirection.File -> {
-          val text = result.stderr?.let { it + "\n" } ?: ""
-          val file = File(standardErrDirection.path)
-          if (standardErrDirection.append) file.appendText(text)
-          else file.writeText(text)
-        }
+  private fun emit(content: String?, direction: OutputDirection) {
+    when (direction) {
+      OutputDirection.Print -> content?.let(::println)
+      is OutputDirection.File -> {
+        val text = content?.let { "$it\n" } ?: ""
+        val file = File(direction.path)
+        if (direction.append) file.appendText(text) else file.writeText(text)
       }
     }
   }

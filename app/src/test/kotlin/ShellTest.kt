@@ -2,6 +2,7 @@ import command.OutputDirection
 import lib.PathUtil
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -249,5 +250,59 @@ class ShellTest {
     )
     assertSame(OutputDirection.Print, parsed.standardOutputDirection)
     assertTrue(">" in parsed.args, "expected '>' to remain in args")
+  }
+
+  @Test
+  fun `parse with greater-greater-than redirects stdout in append mode`() {
+    val parsed = shell().parse("echo hi >> out.txt")
+    val direction = parsed.standardOutputDirection
+    assertIs<OutputDirection.File>(direction)
+    assertEquals("out.txt", direction.path)
+    assertTrue(direction.append, "expected append=true for '>>'")
+    assertSame(OutputDirection.Print, parsed.standardErrorDirection)
+  }
+
+  @Test
+  fun `parse with one-greater-greater-than is equivalent to greater-greater-than`() {
+    val parsed = shell().parse("echo hi 1>> out.txt")
+    val direction = parsed.standardOutputDirection
+    assertIs<OutputDirection.File>(direction)
+    assertEquals("out.txt", direction.path)
+    assertTrue(direction.append, "expected append=true for '1>>'")
+  }
+
+  @Test
+  fun `parse with two-greater-than redirects stderr without appending`() {
+    val parsed = shell().parse("echo hi 2> err.txt")
+    val direction = parsed.standardErrorDirection
+    assertIs<OutputDirection.File>(direction)
+    assertEquals("err.txt", direction.path)
+    assertFalse(direction.append, "expected append=false for '2>'")
+    assertSame(OutputDirection.Print, parsed.standardOutputDirection)
+  }
+
+  @Test
+  fun `parse with two-greater-greater-than redirects stderr in append mode`() {
+    val parsed = shell().parse("echo hi 2>> err.txt")
+    val direction = parsed.standardErrorDirection
+    assertIs<OutputDirection.File>(direction)
+    assertEquals("err.txt", direction.path)
+    assertTrue(direction.append, "expected append=true for '2>>'")
+    assertSame(OutputDirection.Print, parsed.standardOutputDirection)
+  }
+
+  @Test
+  fun `parse with stderr redirect strips the redirect tokens from args`() {
+    val parsed = shell().parse("echo a b c 2>> err.txt")
+    assertEquals(listOf("a", "b", "c"), parsed.args)
+  }
+
+  @Test
+  fun `parse handles a quoted file path in stderr append redirect`() {
+    val parsed = shell().parse("echo hi 2>> \"err file.txt\"")
+    val direction = parsed.standardErrorDirection
+    assertIs<OutputDirection.File>(direction)
+    assertEquals("err file.txt", direction.path)
+    assertTrue(direction.append)
   }
 }
