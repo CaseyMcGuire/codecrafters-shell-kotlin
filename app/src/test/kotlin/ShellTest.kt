@@ -197,6 +197,57 @@ class ShellTest {
   }
 
   @Test
+  fun `parse treats backslash-dollar inside double quotes as a literal dollar`() {
+    val parsed = shell().parse("echo \"\\\$HOME\"")
+    assertEquals(listOf("\$HOME"), parsed.args)
+  }
+
+  @Test
+  fun `parse treats double backslash inside double quotes as a single literal backslash`() {
+    val parsed = shell().parse("echo \"\\\\\"")
+    assertEquals(listOf("\\"), parsed.args)
+  }
+
+  @Test
+  fun `parse treats backslash-doublequote inside double quotes as a literal quote`() {
+    val parsed = shell().parse("echo \"\\\"\"")
+    assertEquals(listOf("\""), parsed.args)
+  }
+
+  @Test
+  fun `parse treats backslash-backtick inside double quotes as a literal backtick`() {
+    val parsed = shell().parse("echo \"\\`\"")
+    assertEquals(listOf("`"), parsed.args)
+  }
+
+  @Test
+  fun `parse keeps backslash literal inside double quotes when next char is not special`() {
+    val parsed = shell().parse("echo \"\\n\"")
+    assertEquals(listOf("\\n"), parsed.args)
+  }
+
+  @Test
+  fun `parse keeps backslash-space literal inside double quotes`() {
+    val parsed = shell().parse("echo \"a\\ b\"")
+    assertEquals(listOf("a\\ b"), parsed.args)
+  }
+
+  @Test
+  fun `parse keeps backslash-letter literal inside double quotes`() {
+    val parsed = shell().parse("echo \"hello\\world\"")
+    assertEquals(listOf("hello\\world"), parsed.args)
+  }
+
+  @Test
+  fun `parse handles literal backslash inside a multi-word double-quoted token`() {
+    // Regression: original failing case was an executable name "exe with \ backslash"
+    // where the backslash and surrounding spaces must all be preserved.
+    val parsed = shell().parse("\"exe with \\ backslash\" /tmp/ant/f4")
+    assertEquals("exe with \\ backslash", parsed.name)
+    assertEquals(listOf("/tmp/ant/f4"), parsed.args)
+  }
+
+  @Test
   fun `parse without redirect defaults to Print direction`() {
     val parsed = shell().parse("echo hi")
     assertSame(OutputDirection.Print, parsed.standardOutputDirection)

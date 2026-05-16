@@ -50,7 +50,17 @@ class Shell(
     var isEscaped = false
     for (char in line) {
       if (isEscaped) {
-        currentToken.append(char)
+        if (parseState == ParseState.OPEN_DOUBLE_QUOTE) {
+          if (char in setOf('$', '\\', '`', '"')) {
+            currentToken.append(char)
+          }
+          else {
+            currentToken.append('\\').append(char)
+          }
+        }
+        else {
+          currentToken.append(char)
+        }
         isEscaped = false
         continue
       }
