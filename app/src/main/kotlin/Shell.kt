@@ -111,7 +111,7 @@ class Shell(
       val line = readln()
       val (command, name, args, outputDirection) = parse(line)
       val result = if (command != null) {
-        ExecutionResult(command.execute(name, args), "")
+        ExecutionResult(command.execute(name, args), null)
       }
       else {
         val executable = pathUtil.getExecutablePath(name)
