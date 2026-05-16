@@ -95,10 +95,10 @@ class Shell(
 
     Executors.newVirtualThreadPerTaskExecutor().use { exec ->
       val stdout = exec.submit<String> {
-        process.inputStream.bufferedReader().readText().trimEnd('\n')
+        process.inputStream.bufferedReader().readText().trimEnd('\n').ifEmpty { null }
       }
       val stderr = exec.submit<String>{
-        process.errorStream.bufferedReader().readText().trimEnd('\n')
+        process.errorStream.bufferedReader().readText().trimEnd('\n').ifEmpty { null }
       }
       process.waitFor()
       return ExecutionResult(stdout.get(), stderr.get())
@@ -122,7 +122,10 @@ class Shell(
         }
       }
       when (outputDirection) {
-        StandardOutputDirection.Print -> println(result.stdout)
+        StandardOutputDirection.Print -> {
+          result.stdout?.let { println(it) }
+          result.stderr?.let { println(it) }
+        }
         is StandardOutputDirection.File -> {
           result.stderr?.let { println(it) }
           result.stdout?.let { File(outputDirection.path).writeText(it + "\n") }
