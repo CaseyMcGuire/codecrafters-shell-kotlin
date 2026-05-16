@@ -103,7 +103,7 @@ class Shell(
       ParsedLine(
         resolveCommand(name),
         name,
-        tokens.drop(1).dropLast(2),
+        tokens.drop(1),
         OutputDirection.Print,
         OutputDirection.Print
       )
@@ -132,7 +132,7 @@ class Shell(
           result.stderr?.let(::println)
         }
         is OutputDirection.File -> {
-          result.stderr?.let { File(standardErrDirection.path).writeText(it + "\n") }
+          File(standardErrDirection.path).writeText(result.stderr?.let { it + "\n" } ?: "")
         }
       }
     }
