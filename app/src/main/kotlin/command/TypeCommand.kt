@@ -3,14 +3,14 @@ package command
 import lib.PathUtil
 
 class TypeCommand(
-  private val resolveCommand: (String) -> Command?,
+  private val resolveBuiltin: (String) -> Command?,
   private val pathUtil: PathUtil
 ) : Command {
   override val text = "type"
 
   override fun execute(name: String, args: List<String>): ExecutionResult {
     val firstArg = args.firstOrNull() ?: return ExecutionResult()
-    resolveCommand(firstArg)?.let {
+    resolveBuiltin(firstArg)?.let {
       return ExecutionResult(stdout = "${it.text} is a shell builtin")
     }
     val path = pathUtil.getExecutablePath(firstArg)

@@ -9,23 +9,23 @@ import kotlin.test.assertNull
 class TypeCommandTest {
 
   private fun typeWith(
-    resolveCommand: (String) -> Command? = { null },
+    resolveBuiltin: (String) -> Command? = { null },
     pathProvider: () -> String = { "" },
   ) = TypeCommand(
-    resolveCommand = resolveCommand,
+    resolveBuiltin = resolveBuiltin,
     pathUtil = PathUtil(pathProvider = pathProvider),
   )
 
   @Test
-  fun `identifies a known builtin via resolveCommand`() {
-    val type = typeWith(resolveCommand = { name -> if (name == "echo") EchoCommand() else null })
+  fun `identifies a known builtin via resolveBuiltin`() {
+    val type = typeWith(resolveBuiltin = { name -> if (name == "echo") EchoCommand() else null })
     assertEquals("echo is a shell builtin", type.execute("type", listOf("echo")).stdout)
   }
 
   @Test
   fun `identifies every registered builtin`() {
     val shell = Shell()
-    val type = shell.resolveCommand("type")!!
+    val type = shell.resolveBuiltin("type")!!
     shell.builtins.forEach { builtin ->
       assertEquals(
         "${builtin.text} is a shell builtin",
@@ -48,7 +48,7 @@ class TypeCommandTest {
 
   @Test
   fun `only inspects the first arg`() {
-    val type = typeWith(resolveCommand = { name -> if (name == "echo") EchoCommand() else null })
+    val type = typeWith(resolveBuiltin = { name -> if (name == "echo") EchoCommand() else null })
     assertEquals("echo is a shell builtin", type.execute("type", listOf("echo", "exit")).stdout)
   }
 
@@ -56,7 +56,7 @@ class TypeCommandTest {
   fun `prefers builtin over PATH executable when names collide`() {
     // PathUtil uses real PATH (echo exists at /bin/echo) but builtin should still win.
     val type = TypeCommand(
-      resolveCommand = { name -> if (name == "echo") EchoCommand() else null },
+      resolveBuiltin = { name -> if (name == "echo") EchoCommand() else null },
       pathUtil = PathUtil(),
     )
     assertEquals("echo is a shell builtin", type.execute("type", listOf("echo")).stdout)
