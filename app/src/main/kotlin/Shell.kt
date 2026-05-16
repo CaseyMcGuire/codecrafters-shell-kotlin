@@ -6,7 +6,7 @@ import command.ExitCommand
 import command.NativeCommand
 import command.ParsedLine
 import command.PwdCommand
-import command.StandardOutputDirection
+import command.OutputDirection
 import command.TypeCommand
 import lib.PathUtil
 import java.io.File
@@ -86,10 +86,27 @@ class Shell(
         resolveCommand(name),
         name,
         tokens.drop(1).dropLast(2),
-        StandardOutputDirection.File(tokens.last())
+        OutputDirection.File(tokens.last()),
+        OutputDirection.Print
       )
-    } else {
-      ParsedLine(resolveCommand(name), name, tokens.drop(1), StandardOutputDirection.Print)
+    }
+    else if (tokens.getOrNull(tokens.size - 2) == "2>") {
+      ParsedLine(
+        resolveCommand(name),
+        name,
+        tokens.drop(1).dropLast(2),
+        OutputDirection.Print,
+        OutputDirection.File(tokens.last())
+      )
+    }
+    else {
+      ParsedLine(
+        resolveCommand(name),
+        name,
+        tokens.drop(1),
+        OutputDirection.Print,
+        OutputDirection.Print
+      )
     }
   }
 
@@ -97,17 +114,25 @@ class Shell(
     while (true) {
       print("$ ")
       val line = readln()
-      val (command, name, args, outputDirection) = parse(line)
+      val (command, name, args, standardOutDirection, standardErrDirection) = parse(line)
       val result = command?.execute(name, args)
         ?: ExecutionResult(stderr = "$name: command not found")
-      when (outputDirection) {
-        StandardOutputDirection.Print -> {
+
+      when (standardOutDirection) {
+        OutputDirection.Print -> {
           result.stdout?.let(::println)
+        }
+        is OutputDirection.File -> {
+          result.stdout?.let { File(standardOutDirection.path).writeText(it + "\n") }
+        }
+      }
+
+      when (standardErrDirection) {
+        OutputDirection.Print -> {
           result.stderr?.let(::println)
         }
-        is StandardOutputDirection.File -> {
-          result.stderr?.let(::println)
-          result.stdout?.let { File(outputDirection.path).writeText(it + "\n") }
+        is OutputDirection.File -> {
+          result.stderr?.let { File(standardErrDirection.path).writeText(it + "\n") }
         }
       }
     }

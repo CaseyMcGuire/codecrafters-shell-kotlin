@@ -1,4 +1,4 @@
-import command.StandardOutputDirection
+import command.OutputDirection
 import lib.PathUtil
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -198,14 +198,14 @@ class ShellTest {
   @Test
   fun `parse without redirect defaults to Print direction`() {
     val parsed = shell().parse("echo hi")
-    assertSame(StandardOutputDirection.Print, parsed.standardOutputDirection)
+    assertSame(OutputDirection.Print, parsed.standardOutputDirection)
   }
 
   @Test
   fun `parse with greater-than redirects stdout to a file`() {
     val parsed = shell().parse("echo hi > out.txt")
     val direction = parsed.standardOutputDirection
-    assertIs<StandardOutputDirection.File>(direction)
+    assertIs<OutputDirection.File>(direction)
     assertEquals("out.txt", direction.path)
   }
 
@@ -213,7 +213,7 @@ class ShellTest {
   fun `parse with one-greater-than is equivalent to greater-than`() {
     val parsed = shell().parse("echo hi 1> out.txt")
     val direction = parsed.standardOutputDirection
-    assertIs<StandardOutputDirection.File>(direction)
+    assertIs<OutputDirection.File>(direction)
     assertEquals("out.txt", direction.path)
   }
 
@@ -234,7 +234,7 @@ class ShellTest {
   fun `parse handles a quoted file path in redirect`() {
     val parsed = shell().parse("echo hi > \"out file.txt\"")
     val direction = parsed.standardOutputDirection
-    assertIs<StandardOutputDirection.File>(direction)
+    assertIs<OutputDirection.File>(direction)
     assertEquals("out file.txt", direction.path)
   }
 
@@ -243,11 +243,11 @@ class ShellTest {
     // ">" appearing anywhere other than second-to-last is a regular token.
     val parsed = shell().parse("echo hi > out.txt extra")
     assertNull(
-      (parsed.standardOutputDirection as? StandardOutputDirection.File)?.path
+      (parsed.standardOutputDirection as? OutputDirection.File)?.path
         ?.takeIf { it == "out.txt" },
       "should not have detected redirect when > is not second-to-last",
     )
-    assertSame(StandardOutputDirection.Print, parsed.standardOutputDirection)
+    assertSame(OutputDirection.Print, parsed.standardOutputDirection)
     assertTrue(">" in parsed.args, "expected '>' to remain in args")
   }
 }

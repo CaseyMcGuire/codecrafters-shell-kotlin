@@ -11,10 +11,11 @@ data class ParsedLine(
   val command: Command?,
   val name: String,
   val args: List<String>,
-  val standardOutputDirection: StandardOutputDirection
+  val standardOutputDirection: OutputDirection,
+  val standardErrorDirection: OutputDirection,
 )
 
-sealed interface StandardOutputDirection {
-  object Print : StandardOutputDirection
-  class File(val path: String) : StandardOutputDirection
+sealed interface OutputDirection {
+  object Print : OutputDirection
+  class File(val path: String) : OutputDirection
 }
