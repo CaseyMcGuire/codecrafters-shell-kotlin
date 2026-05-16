@@ -23,7 +23,7 @@ class Shell(
   private val pathUtil: PathUtil = PathUtil(),
   private val shellState: ShellState = ShellState(),
   private val terminal: Terminal = TerminalBuilder.builder().build(),
-  private val completer: StringsCompleter = StringsCompleter("echo", "exit"),
+  private val completer: StringsCompleter = StringsCompleter(pathUtil.getExecutablesOnPath()),
   private val parser: Parser = DefaultParser().apply { escapeChars = charArrayOf()}
 ) {
   val builtins: List<Command> = listOf(
