@@ -103,7 +103,7 @@ class Shell(
       ParsedLine(
         resolveCommand(name),
         name,
-        tokens.drop(1),
+        tokens.drop(1).dropLast(2),
         OutputDirection.Print,
         OutputDirection.Print
       )
