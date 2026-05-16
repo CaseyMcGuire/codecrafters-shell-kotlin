@@ -11,7 +11,9 @@ import command.TypeCommand
 import lib.PathUtil
 import org.jline.reader.EndOfFileException
 import org.jline.reader.LineReaderBuilder
+import org.jline.reader.Parser
 import org.jline.reader.UserInterruptException
+import org.jline.reader.impl.DefaultParser
 import org.jline.reader.impl.completer.StringsCompleter
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
@@ -21,7 +23,8 @@ class Shell(
   private val pathUtil: PathUtil = PathUtil(),
   private val shellState: ShellState = ShellState(),
   private val terminal: Terminal = TerminalBuilder.builder().build(),
-  private val completer: StringsCompleter = StringsCompleter("echo", "exit")
+  private val completer: StringsCompleter = StringsCompleter("echo", "exit"),
+  private val parser: Parser = DefaultParser().apply { escapeChars = charArrayOf()}
 ) {
   val builtins: List<Command> = listOf(
     EchoCommand(),
@@ -132,6 +135,7 @@ class Shell(
     val reader = LineReaderBuilder.builder()
       .terminal(terminal)
       .completer(completer)
+      .parser(parser)
       .build()
     while (true) {
       val line = try {
