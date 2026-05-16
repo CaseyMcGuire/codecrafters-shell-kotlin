@@ -1,6 +1,7 @@
 import command.CdCommand
 import command.Command
 import command.EchoCommand
+import command.ExecutionResult
 import command.ExitCommand
 import command.ParsedLine
 import command.PwdCommand
@@ -80,8 +81,7 @@ class Shell(
         resolveCommand(name),
         name,
         tokens.drop(1).dropLast(2),
-        StandardOutputDirection.File(tokens.last()
-        )
+        StandardOutputDirection.File(tokens.last())
       )
     } else {
       ParsedLine(resolveCommand(name), name, tokens.drop(1), StandardOutputDirection.Print)
@@ -94,10 +94,10 @@ class Shell(
       .start()
 
     Executors.newVirtualThreadPerTaskExecutor().use { exec ->
-      val stdout = exec.submit<String> {
+      val stdout = exec.submit<String?> {
         process.inputStream.bufferedReader().readText().trimEnd('\n').ifEmpty { null }
       }
-      val stderr = exec.submit<String>{
+      val stderr = exec.submit<String?> {
         process.errorStream.bufferedReader().readText().trimEnd('\n').ifEmpty { null }
       }
       process.waitFor()
@@ -111,32 +111,25 @@ class Shell(
       val line = readln()
       val (command, name, args, outputDirection) = parse(line)
       val result = if (command != null) {
-        ExecutionResult(command.execute(name, args), null)
-      }
-      else {
+        command.execute(name, args)
+      } else {
         val executable = pathUtil.getExecutablePath(name)
-        if (executable != null) {
-          execute(name, args)
-        } else {
-          ExecutionResult("$name: command not found", null)
-        }
+        if (executable != null) execute(name, args)
+        else ExecutionResult(stderr = "$name: command not found")
       }
       when (outputDirection) {
         StandardOutputDirection.Print -> {
-          result.stdout?.let { println(it) }
-          result.stderr?.let { println(it) }
+          result.stdout?.let(::println)
+          result.stderr?.let(::println)
         }
         is StandardOutputDirection.File -> {
-          result.stderr?.let { println(it) }
+          result.stderr?.let(::println)
           result.stdout?.let { File(outputDirection.path).writeText(it + "\n") }
         }
       }
-
     }
   }
 }
-
-data class ExecutionResult(val stdout: String?, val stderr: String?)
 
 enum class ParseState {
   NONE,

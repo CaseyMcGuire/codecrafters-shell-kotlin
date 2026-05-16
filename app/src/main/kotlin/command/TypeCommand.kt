@@ -1,7 +1,6 @@
 package command
 
 import lib.PathUtil
-import java.io.File
 
 class TypeCommand(
   private val resolveCommand: (String) -> Command?,
@@ -9,9 +8,13 @@ class TypeCommand(
 ) : Command {
   override val text = "type"
 
-  override fun execute(name: String, args: List<String>): String? {
-    val firstArg = args.firstOrNull() ?: return null
-    resolveCommand(firstArg)?.let { return "${it.text} is a shell builtin" }
-    return pathUtil.getExecutablePath(firstArg) ?: "$firstArg: not found"
+  override fun execute(name: String, args: List<String>): ExecutionResult {
+    val firstArg = args.firstOrNull() ?: return ExecutionResult()
+    resolveCommand(firstArg)?.let {
+      return ExecutionResult(stdout = "${it.text} is a shell builtin")
+    }
+    val path = pathUtil.getExecutablePath(firstArg)
+    return if (path != null) ExecutionResult(stdout = path)
+           else ExecutionResult(stdout = "$firstArg: not found")
   }
 }

@@ -7,13 +7,13 @@ class PwdCommandTest {
   @Test
   fun `returns the value from cwdProvider`() {
     val pwd = PwdCommand(cwdProvider = { "/some/fake/dir" })
-    assertEquals("/some/fake/dir", pwd.execute("pwd", emptyList()))
+    assertEquals("/some/fake/dir", pwd.execute("pwd", emptyList()).stdout)
   }
 
   @Test
   fun `ignores args`() {
     val pwd = PwdCommand(cwdProvider = { "/x" })
-    assertEquals("/x", pwd.execute("pwd", listOf("ignored", "args")))
+    assertEquals("/x", pwd.execute("pwd", listOf("ignored", "args")).stdout)
   }
 
   @Test
@@ -21,8 +21,8 @@ class PwdCommandTest {
     var current = "/first"
     val pwd = PwdCommand(cwdProvider = { current })
 
-    assertEquals("/first", pwd.execute("pwd", emptyList()))
+    assertEquals("/first", pwd.execute("pwd", emptyList()).stdout)
     current = "/second"
-    assertEquals("/second", pwd.execute("pwd", emptyList()))
+    assertEquals("/second", pwd.execute("pwd", emptyList()).stdout)
   }
 }

@@ -7,7 +7,7 @@ class ExitCommand(
 ) : Command {
   override val text = "exit"
 
-  override fun execute(name: String, args: List<String>): String? {
+  override fun execute(name: String, args: List<String>): ExecutionResult {
     exit(0)
   }
 }

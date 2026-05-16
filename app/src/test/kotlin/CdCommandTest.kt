@@ -21,7 +21,7 @@ class CdCommandTest {
     val (cd, state) = cdWith("/")
     val result = cd.execute("cd", listOf(dir.absolutePath))
 
-    assertNull(result)
+    assertNull(result.stderr)
     assertEquals(dir.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -32,7 +32,7 @@ class CdCommandTest {
 
     val result = cd.execute("cd", listOf(missing))
 
-    assertEquals("cd: $missing: No such file or directory", result)
+    assertEquals("cd: $missing: No such file or directory", result.stderr)
     assertEquals("/", state.currentWorkingDirectory)
   }
 
@@ -41,7 +41,7 @@ class CdCommandTest {
     val (cd, state) = cdWith("/")
     val result = cd.execute("cd", emptyList())
 
-    assertNull(result)
+    assertNull(result.stderr)
     assertEquals("/", state.currentWorkingDirectory)
   }
 
@@ -52,7 +52,7 @@ class CdCommandTest {
 
     val result = cd.execute("cd", listOf("child"))
 
-    assertNull(result)
+    assertNull(result.stderr)
     assertEquals(sub.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -63,7 +63,7 @@ class CdCommandTest {
 
     val result = cd.execute("cd", listOf(".."))
 
-    assertNull(result)
+    assertNull(result.stderr)
     assertEquals(dir.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -73,7 +73,7 @@ class CdCommandTest {
 
     val result = cd.execute("cd", listOf("."))
 
-    assertNull(result)
+    assertNull(result.stderr)
     assertEquals(dir.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -84,7 +84,7 @@ class CdCommandTest {
 
     val result = cd.execute("cd", listOf("${sub.absolutePath}/../child"))
 
-    assertNull(result)
+    assertNull(result.stderr)
     assertEquals(sub.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -94,7 +94,7 @@ class CdCommandTest {
 
     val result = cd.execute("cd", listOf("nope"))
 
-    assertEquals("cd: ${dir.absolutePath}/nope: No such file or directory", result)
+    assertEquals("cd: ${dir.absolutePath}/nope: No such file or directory", result.stderr)
     assertEquals(dir.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -104,7 +104,7 @@ class CdCommandTest {
 
     val result = cd.execute("cd", listOf(first.absolutePath, second.absolutePath))
 
-    assertNull(result)
+    assertNull(result.stderr)
     assertEquals(first.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -114,7 +114,7 @@ class CdCommandTest {
 
     val result = cd.execute("cd", listOf("~"))
 
-    assertNull(result)
+    assertNull(result.stderr)
     assertEquals(home.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -125,7 +125,7 @@ class CdCommandTest {
 
     val result = cd.execute("cd", listOf("~/child"))
 
-    assertNull(result)
+    assertNull(result.stderr)
     assertEquals(sub.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -135,7 +135,7 @@ class CdCommandTest {
 
     val result = cd.execute("cd", listOf("~"))
 
-    assertNull(result)
+    assertNull(result.stderr)
     assertEquals(home.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -146,7 +146,7 @@ class CdCommandTest {
     val result = cd.execute("cd", listOf("~/missing"))
 
     val expected = "${home.absolutePath}/missing"
-    assertEquals("cd: $expected: No such file or directory", result)
+    assertEquals("cd: $expected: No such file or directory", result.stderr)
     assertEquals("/", state.currentWorkingDirectory)
   }
 
@@ -158,7 +158,7 @@ class CdCommandTest {
 
     val result = cd.execute("cd", listOf("~bob"))
 
-    assertNull(result)
+    assertNull(result.stderr)
     assertEquals(literal.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -168,7 +168,7 @@ class CdCommandTest {
 
     val result = cd.execute("cd", listOf("~bob"))
 
-    assertEquals("cd: ${cwd.absolutePath}/~bob: No such file or directory", result)
+    assertEquals("cd: ${cwd.absolutePath}/~bob: No such file or directory", result.stderr)
     assertEquals(cwd.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -180,7 +180,7 @@ class CdCommandTest {
 
       val result = cd.execute("cd", listOf("~/../${sibling.name}"))
 
-      assertNull(result)
+      assertNull(result.stderr)
       assertEquals(sibling.absolutePath, state.currentWorkingDirectory)
     } finally {
       sibling.delete()

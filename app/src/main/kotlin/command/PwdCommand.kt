@@ -5,5 +5,6 @@ class PwdCommand(
 ) : Command {
   override val text = "pwd"
 
-  override fun execute(name: String, args: List<String>): String = cwdProvider()
+  override fun execute(name: String, args: List<String>): ExecutionResult =
+    ExecutionResult(stdout = cwdProvider())
 }

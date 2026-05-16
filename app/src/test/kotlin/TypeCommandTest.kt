@@ -19,7 +19,7 @@ class TypeCommandTest {
   @Test
   fun `identifies a known builtin via resolveCommand`() {
     val type = typeWith(resolveCommand = { name -> if (name == "echo") EchoCommand() else null })
-    assertEquals("echo is a shell builtin", type.execute("type", listOf("echo")))
+    assertEquals("echo is a shell builtin", type.execute("type", listOf("echo")).stdout)
   }
 
   @Test
@@ -29,25 +29,27 @@ class TypeCommandTest {
     shell.builtins.forEach { builtin ->
       assertEquals(
         "${builtin.text} is a shell builtin",
-        type.execute("type", listOf(builtin.text)),
+        type.execute("type", listOf(builtin.text)).stdout,
       )
     }
   }
 
   @Test
   fun `reports not found when neither builtin nor PATH match`() {
-    assertEquals("nope: not found", typeWith().execute("type", listOf("nope")))
+    assertEquals("nope: not found", typeWith().execute("type", listOf("nope")).stdout)
   }
 
   @Test
-  fun `with no args returns null`() {
-    assertNull(typeWith().execute("type", emptyList()))
+  fun `with no args returns empty result`() {
+    val result = typeWith().execute("type", emptyList())
+    assertNull(result.stdout)
+    assertNull(result.stderr)
   }
 
   @Test
   fun `only inspects the first arg`() {
     val type = typeWith(resolveCommand = { name -> if (name == "echo") EchoCommand() else null })
-    assertEquals("echo is a shell builtin", type.execute("type", listOf("echo", "exit")))
+    assertEquals("echo is a shell builtin", type.execute("type", listOf("echo", "exit")).stdout)
   }
 
   @Test
@@ -57,6 +59,6 @@ class TypeCommandTest {
       resolveCommand = { name -> if (name == "echo") EchoCommand() else null },
       pathUtil = PathUtil(),
     )
-    assertEquals("echo is a shell builtin", type.execute("type", listOf("echo")))
+    assertEquals("echo is a shell builtin", type.execute("type", listOf("echo")).stdout)
   }
 }

@@ -9,7 +9,8 @@ class CdCommand(
   private val shellState: ShellState
 ) : Command {
   override val text = "cd"
-  override fun execute(name: String, args: List<String>): String? {
+
+  override fun execute(name: String, args: List<String>): ExecutionResult {
     val path = args.firstOrNull()?.let {
       if (Path.of(it).isAbsolute)
         Path.of(it).normalize().toString()
@@ -17,13 +18,13 @@ class CdCommand(
         Path.of(it.replaceFirst("~", shellState.homeDirectory)).normalize().toString()
       else
         Path.of(shellState.currentWorkingDirectory).resolve(it).normalize().toString()
-    } ?: return null
-    if (pathUtil.isValidPath(path)) {
+    } ?: return ExecutionResult()
+
+    return if (pathUtil.isValidPath(path)) {
       shellState.currentWorkingDirectory = path
-      return null
-    }
-    else {
-      return "cd: $path: No such file or directory"
+      ExecutionResult()
+    } else {
+      ExecutionResult(stderr = "cd: $path: No such file or directory")
     }
   }
 }
