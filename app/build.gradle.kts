@@ -21,6 +21,7 @@ repositories {
 }
 
 dependencies {
+    implementation("org.jline:jline:3.27.1")
     testImplementation(kotlin("test"))
 }
 
@@ -38,4 +39,5 @@ java {
 application {
     // Define the main class for the application.
     mainClass.set("AppKt")
+    applicationDefaultJvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
 }

@@ -9,11 +9,19 @@ import command.PwdCommand
 import command.OutputDirection
 import command.TypeCommand
 import lib.PathUtil
+import org.jline.reader.EndOfFileException
+import org.jline.reader.LineReaderBuilder
+import org.jline.reader.UserInterruptException
+import org.jline.reader.impl.completer.StringsCompleter
+import org.jline.terminal.Terminal
+import org.jline.terminal.TerminalBuilder
 import java.io.File
 
 class Shell(
   private val pathUtil: PathUtil = PathUtil(),
   private val shellState: ShellState = ShellState(),
+  private val terminal: Terminal = TerminalBuilder.builder().build(),
+  private val completer: StringsCompleter = StringsCompleter("echo", "exit")
 ) {
   val builtins: List<Command> = listOf(
     EchoCommand(),
@@ -111,9 +119,19 @@ class Shell(
   }
 
   fun run() {
+    val reader = LineReaderBuilder.builder()
+      .terminal(terminal)
+      .completer(completer)
+      .build()
     while (true) {
-      print("$ ")
-      val line = readln()
+      val line = try {
+        reader.readLine("$ ")
+      } catch (_: UserInterruptException) {
+        break
+      }
+      catch (_: EndOfFileException) {
+        break
+      }
       val (command, name, args, standardOutDirection, standardErrDirection) = parse(line)
       val result = command?.execute(name, args)
         ?: ExecutionResult(stderr = "$name: command not found")
