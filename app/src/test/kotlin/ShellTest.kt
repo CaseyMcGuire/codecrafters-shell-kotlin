@@ -1,9 +1,12 @@
+import command.StandardOutputDirection
 import lib.PathUtil
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 class ShellTest {
 
@@ -190,5 +193,61 @@ class ShellTest {
   fun `parse treats backslash-quote as a literal quote character`() {
     val parsed = shell().parse("echo \\'hello\\'")
     assertEquals(listOf("'hello'"), parsed.args)
+  }
+
+  @Test
+  fun `parse without redirect defaults to Print direction`() {
+    val parsed = shell().parse("echo hi")
+    assertSame(StandardOutputDirection.Print, parsed.standardOutputDirection)
+  }
+
+  @Test
+  fun `parse with greater-than redirects stdout to a file`() {
+    val parsed = shell().parse("echo hi > out.txt")
+    val direction = parsed.standardOutputDirection
+    assertIs<StandardOutputDirection.File>(direction)
+    assertEquals("out.txt", direction.path)
+  }
+
+  @Test
+  fun `parse with one-greater-than is equivalent to greater-than`() {
+    val parsed = shell().parse("echo hi 1> out.txt")
+    val direction = parsed.standardOutputDirection
+    assertIs<StandardOutputDirection.File>(direction)
+    assertEquals("out.txt", direction.path)
+  }
+
+  @Test
+  fun `parse with redirect strips the redirect tokens from args`() {
+    val parsed = shell().parse("echo hi > out.txt")
+    assertEquals("echo", parsed.name)
+    assertEquals(listOf("hi"), parsed.args)
+  }
+
+  @Test
+  fun `parse with redirect and multiple args strips only the redirect tokens`() {
+    val parsed = shell().parse("echo a b c > out.txt")
+    assertEquals(listOf("a", "b", "c"), parsed.args)
+  }
+
+  @Test
+  fun `parse handles a quoted file path in redirect`() {
+    val parsed = shell().parse("echo hi > \"out file.txt\"")
+    val direction = parsed.standardOutputDirection
+    assertIs<StandardOutputDirection.File>(direction)
+    assertEquals("out file.txt", direction.path)
+  }
+
+  @Test
+  fun `parse keeps a literal greater-than as an argument when not in redirect position`() {
+    // ">" appearing anywhere other than second-to-last is a regular token.
+    val parsed = shell().parse("echo hi > out.txt extra")
+    assertNull(
+      (parsed.standardOutputDirection as? StandardOutputDirection.File)?.path
+        ?.takeIf { it == "out.txt" },
+      "should not have detected redirect when > is not second-to-last",
+    )
+    assertSame(StandardOutputDirection.Print, parsed.standardOutputDirection)
+    assertTrue(">" in parsed.args, "expected '>' to remain in args")
   }
 }

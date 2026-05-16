@@ -4,6 +4,7 @@ import command.EchoCommand
 import command.ExitCommand
 import command.ParsedLine
 import command.PwdCommand
+import command.StandardOutputDirection
 import command.TypeCommand
 import lib.PathUtil
 import java.io.File
@@ -73,7 +74,17 @@ class Shell(
       tokens.add(currentToken.toString())
     }
     val name = tokens.firstOrNull().orEmpty()
-    return ParsedLine(resolveCommand(name), name, tokens.drop(1))
+    return if (tokens.getOrNull(tokens.size - 2) in setOf(">", "1>")) {
+      ParsedLine(
+        resolveCommand(name),
+        name,
+        tokens.drop(1).dropLast(2),
+        StandardOutputDirection.File(tokens.last()
+        )
+      )
+    } else {
+      ParsedLine(resolveCommand(name), name, tokens.drop(1), StandardOutputDirection.Print)
+    }
   }
 
   fun execute(command: String, args: List<String>): String {
@@ -90,8 +101,10 @@ class Shell(
     while (true) {
       print("$ ")
       val line = readln()
-      val (command, name, args) = parse(line)
-      val output = if (command != null) command.execute(name, args)
+      val (command, name, args, outputDirection) = parse(line)
+      val output = if (command != null) {
+        command.execute(name, args)
+      }
       else {
         val executable = pathUtil.getExecutablePath(name)
         if (executable != null) {
@@ -100,7 +113,13 @@ class Shell(
           "$name: command not found"
         }
       }
-      output?.let(::println)
+      when (outputDirection) {
+        StandardOutputDirection.Print -> output?.let(::println)
+        is StandardOutputDirection.File -> {
+          output?.let { File(outputDirection.path).writeText(it + "\n") }
+        }
+      }
+
     }
   }
 }
