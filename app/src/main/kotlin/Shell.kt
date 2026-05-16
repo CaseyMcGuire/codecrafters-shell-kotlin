@@ -10,6 +10,7 @@ import command.OutputDirection
 import command.TypeCommand
 import lib.PathUtil
 import org.jline.reader.EndOfFileException
+import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
 import org.jline.reader.Parser
 import org.jline.reader.UserInterruptException
@@ -136,6 +137,9 @@ class Shell(
       .terminal(terminal)
       .completer(completer)
       .parser(parser)
+      .option(LineReader.Option.MENU_COMPLETE, true)
+      .option(LineReader.Option.AUTO_LIST, false)
+      .option(LineReader.Option.LIST_AMBIGUOUS, false)
       .build()
     while (true) {
       val line = try {
