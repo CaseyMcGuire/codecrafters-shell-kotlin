@@ -12,4 +12,4 @@ LIBS_DIR="/tmp/codecrafters-libs-shell-kotlin"
 BUILD_DIR="/tmp/codecrafters-build-shell-kotlin"
 KOTLIN_MAIN="$BUILD_DIR/classes/kotlin/main"
 
-exec java -cp "$KOTLIN_MAIN:$LIBS_DIR/*" AppKt "$@"
+exec java --enable-native-access=ALL-UNNAMED -cp "$KOTLIN_MAIN:$LIBS_DIR/*" AppKt "$@"
