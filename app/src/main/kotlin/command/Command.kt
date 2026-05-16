@@ -17,5 +17,5 @@ data class ParsedLine(
 
 sealed interface OutputDirection {
   object Print : OutputDirection
-  class File(val path: String) : OutputDirection
+  class File(val path: String, val append: Boolean) : OutputDirection
 }

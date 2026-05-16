@@ -81,12 +81,12 @@ class Shell(
       tokens.add(currentToken.toString())
     }
     val name = tokens.firstOrNull().orEmpty()
-    return if (tokens.getOrNull(tokens.size - 2) in setOf(">", "1>")) {
+    return if (tokens.getOrNull(tokens.size - 2) in setOf(">", "1>", "1>>", ">>")) {
       ParsedLine(
         resolveCommand(name),
         name,
         tokens.drop(1).dropLast(2),
-        OutputDirection.File(tokens.last()),
+        OutputDirection.File(tokens.last(), tokens.get(tokens.size - 2) in setOf("1>>", ">>")),
         OutputDirection.Print
       )
     }
@@ -96,7 +96,7 @@ class Shell(
         name,
         tokens.drop(1).dropLast(2),
         OutputDirection.Print,
-        OutputDirection.File(tokens.last())
+        OutputDirection.File(tokens.last(), false)
       )
     }
     else {
@@ -123,7 +123,10 @@ class Shell(
           result.stdout?.let(::println)
         }
         is OutputDirection.File -> {
-          result.stdout?.let { File(standardOutDirection.path).writeText(it + "\n") }
+          val text = result.stdout?.let { it + "\n" } ?: ""
+          val file = File(standardOutDirection.path)
+          if (standardOutDirection.append) file.appendText(text)
+          else file.writeText(text)
         }
       }
 
@@ -132,7 +135,10 @@ class Shell(
           result.stderr?.let(::println)
         }
         is OutputDirection.File -> {
-          File(standardErrDirection.path).writeText(result.stderr?.let { it + "\n" } ?: "")
+          val text = result.stderr?.let { it + "\n" } ?: ""
+          val file = File(standardErrDirection.path)
+          if (standardErrDirection.append) file.appendText(text)
+          else file.writeText(text)
         }
       }
     }
