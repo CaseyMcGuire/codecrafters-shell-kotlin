@@ -24,7 +24,6 @@ class Shell(
   private val pathUtil: PathUtil = PathUtil(),
   private val shellState: ShellState = ShellState(),
   private val terminal: Terminal = TerminalBuilder.builder().build(),
-  private val completer: StringsCompleter = StringsCompleter(pathUtil.getExecutablesOnPath()),
   private val parser: Parser = DefaultParser().apply { escapeChars = charArrayOf()}
 ) {
   val builtins: List<Command> = listOf(
@@ -38,6 +37,7 @@ class Shell(
     )
   )
 
+  private val completer: StringsCompleter = StringsCompleter(pathUtil.getExecutablesOnPath() + builtins.map { it.text })
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
   fun resolveBuiltin(name: String): Command? = byText[name]
