@@ -4,28 +4,30 @@ import command.EchoCommand
 import command.ExecutionResult
 import command.ExitCommand
 import command.NativeCommand
-import command.ParsedLine
 import command.PwdCommand
 import command.OutputDirection
 import command.TypeCommand
+import lib.Parser
 import lib.PathUtil
 import org.jline.reader.EndOfFileException
 import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
-import org.jline.reader.Parser
 import org.jline.reader.UserInterruptException
 import org.jline.reader.impl.DefaultParser
 import org.jline.reader.impl.completer.StringsCompleter
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
 import java.io.File
+import org.jline.reader.Parser as JLineParser
 
 class Shell(
   private val pathUtil: PathUtil = PathUtil(),
   private val shellState: ShellState = ShellState(),
   private val terminal: Terminal = TerminalBuilder.builder().build(),
-  private val parser: Parser = DefaultParser().apply { escapeChars = charArrayOf()}
+  private val jlineParser: JLineParser = DefaultParser().apply { escapeChars = charArrayOf() },
 ) {
+  private val parser: Parser = Parser()
+
   val builtins: List<Command> = listOf(
     EchoCommand(),
     ExitCommand(),
@@ -37,7 +39,7 @@ class Shell(
     )
   )
 
-  private val completer: StringsCompleter = StringsCompleter(pathUtil.getExecutablesOnPath() + builtins.map { it.text })
+  private val completer: StringsCompleter = StringsCompleter(pathUtil.executablesOnPath + builtins.map { it.text })
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
   fun resolveBuiltin(name: String): Command? = byText[name]
@@ -47,99 +49,16 @@ class Shell(
       NativeCommand(name) { shellState.currentWorkingDirectory }
     }
 
-  fun parse(line: String): ParsedLine {
-    val tokens = mutableListOf<String>()
-    var currentToken = StringBuilder()
-    var parseState = ParseState.NONE
-    var isEscaped = false
-    for (char in line) {
-      if (isEscaped) {
-        if (parseState == ParseState.OPEN_DOUBLE_QUOTE) {
-          if (char in setOf('$', '\\', '`', '"')) {
-            currentToken.append(char)
-          }
-          else {
-            currentToken.append('\\').append(char)
-          }
-        }
-        else {
-          currentToken.append(char)
-        }
-        isEscaped = false
-        continue
-      }
-      when (char) {
-        '\\' -> if (parseState != ParseState.OPEN_SINGLE_QUOTE) isEscaped = true
-                else currentToken.append(char)
-        ' ' -> {
-          if (parseState == ParseState.NONE) {
-            if (currentToken.isNotEmpty()) {
-              tokens.add(currentToken.toString())
-              currentToken = StringBuilder()
-            }
-          }
-          else {
-            currentToken.append(char)
-          }
-        }
-        '\'' -> {
-          when (parseState) {
-            ParseState.NONE -> parseState = ParseState.OPEN_SINGLE_QUOTE
-            ParseState.OPEN_SINGLE_QUOTE -> parseState = ParseState.NONE
-            else -> currentToken.append(char)
-          }
-        }
-        '"' -> {
-          when (parseState) {
-            ParseState.NONE -> parseState = ParseState.OPEN_DOUBLE_QUOTE
-            ParseState.OPEN_DOUBLE_QUOTE -> parseState = ParseState.NONE
-            else -> currentToken.append(char)
-          }
-        }
-        else -> currentToken.append(char)
-      }
-    }
-    if (currentToken.isNotEmpty()) {
-      tokens.add(currentToken.toString())
-    }
-    val name = tokens.firstOrNull().orEmpty()
-    return if (tokens.getOrNull(tokens.size - 2) in setOf(">", "1>", "1>>", ">>")) {
-      ParsedLine(
-        resolveCommand(name),
-        name,
-        tokens.drop(1).dropLast(2),
-        OutputDirection.File(tokens.last(), tokens[tokens.size - 2] in setOf("1>>", ">>")),
-        OutputDirection.Print
-      )
-    }
-    else if (tokens.getOrNull(tokens.size - 2) in setOf("2>", "2>>")) {
-      ParsedLine(
-        resolveCommand(name),
-        name,
-        tokens.drop(1).dropLast(2),
-        OutputDirection.Print,
-        OutputDirection.File(tokens.last(), tokens[tokens.size - 2] == "2>>")
-      )
-    }
-    else {
-      ParsedLine(
-        resolveCommand(name),
-        name,
-        tokens.drop(1),
-        OutputDirection.Print,
-        OutputDirection.Print
-      )
-    }
-  }
+  fun parse(line: String): command.ParsedLine = parser.parse(line)
 
   fun run() {
     val reader = LineReaderBuilder.builder()
       .terminal(terminal)
       .completer(completer)
-      .parser(parser)
-      .option(LineReader.Option.MENU_COMPLETE, true)
+      .parser(jlineParser)
+      //.option(LineReader.Option.MENU_COMPLETE, true)
       .option(LineReader.Option.AUTO_LIST, false)
-      .option(LineReader.Option.LIST_AMBIGUOUS, false)
+      .option(LineReader.Option.LIST_AMBIGUOUS, true)
       .build()
     while (true) {
       val line = try {
@@ -150,8 +69,8 @@ class Shell(
       catch (_: EndOfFileException) {
         break
       }
-      val (command, name, args, standardOutDirection, standardErrDirection) = parse(line)
-      val result = command?.execute(name, args)
+      val (name, args, standardOutDirection, standardErrDirection) = parser.parse(line)
+      val result = resolveCommand(name)?.execute(name, args)
         ?: ExecutionResult(stderr = "$name: command not found")
 
       emit(result.stdout, standardOutDirection)
@@ -169,10 +88,4 @@ class Shell(
       }
     }
   }
-}
-
-enum class ParseState {
-  NONE,
-  OPEN_DOUBLE_QUOTE,
-  OPEN_SINGLE_QUOTE,
 }

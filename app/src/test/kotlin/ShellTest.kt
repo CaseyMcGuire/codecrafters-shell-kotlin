@@ -27,18 +27,15 @@ class ShellTest {
   }
 
   @Test
-  fun `parse splits tokens and resolves command`() {
-    val shell = shell()
-    val parsed = shell.parse("echo hello world")
-    assertSame(shell.resolveCommand("echo"), parsed.command)
+  fun `parse splits tokens and exposes the command name`() {
+    val parsed = shell().parse("echo hello world")
     assertEquals("echo", parsed.name)
     assertEquals(listOf("hello", "world"), parsed.args)
   }
 
   @Test
-  fun `parse returns null command for unknown text but preserves name and args`() {
+  fun `parse preserves an unknown command name as the name field`() {
     val parsed = shell().parse("foo bar")
-    assertNull(parsed.command)
     assertEquals("foo", parsed.name)
     assertEquals(listOf("bar"), parsed.args)
   }
@@ -95,9 +92,7 @@ class ShellTest {
 
   @Test
   fun `parse handles a quoted command name`() {
-    val shell = shell()
-    val parsed = shell.parse("'echo' hi")
-    assertSame(shell.resolveCommand("echo"), parsed.command)
+    val parsed = shell().parse("'echo' hi")
     assertEquals("echo", parsed.name)
     assertEquals(listOf("hi"), parsed.args)
   }
@@ -159,9 +154,7 @@ class ShellTest {
 
   @Test
   fun `parse handles a double-quoted command name`() {
-    val shell = shell()
-    val parsed = shell.parse("\"echo\" hi")
-    assertSame(shell.resolveCommand("echo"), parsed.command)
+    val parsed = shell().parse("\"echo\" hi")
     assertEquals("echo", parsed.name)
     assertEquals(listOf("hi"), parsed.args)
   }

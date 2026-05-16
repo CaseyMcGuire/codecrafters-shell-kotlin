@@ -11,16 +11,9 @@ import kotlin.io.path.listDirectoryEntries
 class PathUtil(
   private val pathProvider: () -> String = { System.getenv("PATH").orEmpty() },
 ) {
-  fun getExecutablePath(commandText: String): String? =
-    pathProvider().split(File.pathSeparator)
-      .map { "$it/$commandText" }
-      .firstOrNull {
-        val file = File(it)
-        file.isFile && file.canExecute()
-      }
 
-  fun getExecutablesOnPath(): List<String> {
-    return pathProvider().split(File.pathSeparator)
+  val executablesOnPath: List<String> by lazy {
+    pathProvider().split(File.pathSeparator)
       .asSequence()
       .map { Path(it) }
       .flatMap {
@@ -31,6 +24,14 @@ class PathUtil(
       .distinct()
       .toList()
   }
+
+  fun getExecutablePath(commandText: String): String? =
+    pathProvider().split(File.pathSeparator)
+      .map { "$it/$commandText" }
+      .firstOrNull {
+        val file = File(it)
+        file.isFile && file.canExecute()
+      }
 
   fun isValidPath(path: String): Boolean {
     return File(path).exists()
