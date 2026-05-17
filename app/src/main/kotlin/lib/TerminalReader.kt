@@ -56,7 +56,7 @@ class TerminalReader(
 
       when {
         longestCommonPrefix != null -> {
-          reader.buffer.write("$longestCommonPrefix ")
+          reader.buffer.write(longestCommonPrefix)
         }
         matches.size == 1 -> {
           reader.buffer.write(matches.first().removePrefix(prefix) + " ")
