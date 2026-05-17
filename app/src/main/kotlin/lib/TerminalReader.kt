@@ -55,17 +55,11 @@ class TerminalReader(
       val longestCommonPrefix = trie.getLongestCommonPrefix(prefix)
 
       when {
-        longestCommonPrefix != null -> {
-          val printValue = if (trie.getLongestCommonPrefix(longestCommonPrefix) == null) {
-            longestCommonPrefix
-          }
-          else {
-            "$longestCommonPrefix "
-          }
-          reader.buffer.write(printValue)
-        }
         matches.size == 1 -> {
           reader.buffer.write(matches.first().removePrefix(prefix) + " ")
+        }
+        longestCommonPrefix != null -> {
+          reader.buffer.write(longestCommonPrefix)
         }
         !lastWasTab -> {
           ringBell()
