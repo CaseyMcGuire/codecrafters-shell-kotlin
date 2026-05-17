@@ -12,9 +12,10 @@ import lib.PathUtil
 import org.jline.reader.EndOfFileException
 import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
+import org.jline.reader.Reference
 import org.jline.reader.UserInterruptException
+import org.jline.reader.Widget
 import org.jline.reader.impl.DefaultParser
-import org.jline.reader.impl.completer.StringsCompleter
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
 import java.io.File
@@ -26,6 +27,12 @@ class Shell(
   private val terminal: Terminal = TerminalBuilder.builder().build(),
   private val jlineParser: JLineParser = DefaultParser().apply { escapeChars = charArrayOf() },
 ) {
+
+  companion object {
+    const val BELL = "\u0007"
+    const val WIDGET_KEY = "path-complete"
+  }
+
   private val parser: Parser = Parser()
 
   val builtins: List<Command> = listOf(
@@ -38,8 +45,6 @@ class Shell(
       shellState
     )
   )
-
-  private val completer: StringsCompleter = StringsCompleter(pathUtil.executablesOnPath + builtins.map { it.text })
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
   fun resolveBuiltin(name: String): Command? = byText[name]
@@ -51,22 +56,69 @@ class Shell(
 
   fun parse(line: String): command.ParsedLine = parser.parse(line)
 
-  fun run() {
+  fun createReader(): LineReader {
+    var lastWasTab = false
     val reader = LineReaderBuilder.builder()
       .terminal(terminal)
-      .completer(completer)
       .parser(jlineParser)
       //.option(LineReader.Option.MENU_COMPLETE, true)
       .option(LineReader.Option.AUTO_LIST, false)
       .option(LineReader.Option.LIST_AMBIGUOUS, true)
       .build()
+
+    val possibleMatches =
+      (pathUtil.executablesOnPath + builtins.map { it.text })
+        .distinct()
+        .sorted()
+
+    reader.widgets[WIDGET_KEY] = Widget {
+      if (reader.lastBinding != "\t") {
+        lastWasTab = false
+      }
+      val prefix = reader.buffer.upToCursor().takeLastWhile { !it.isWhitespace() }
+      if (prefix.isEmpty()) {
+        ringBell(reader)
+        lastWasTab = false
+        return@Widget true
+      }
+
+      val matches = possibleMatches
+        .filter { it.startsWith(prefix) }
+
+      if (!lastWasTab) {
+        ringBell(reader)
+        lastWasTab = true
+      } else {
+        lastWasTab = false
+        if (matches.isEmpty()) {
+          ringBell(reader)
+        } else if (matches.size == 1) {
+          reader.buffer.write(matches.first().removePrefix(prefix) + " ")
+        } else {
+          reader.printAbove(matches.joinToString("  "))
+        }
+      }
+      true
+    }
+    reader.keyMaps["main"]!!.bind(Reference(WIDGET_KEY), "\t")
+
+    return reader
+  }
+
+  private fun ringBell(reader: LineReader) {
+    reader.terminal.writer().write(BELL)
+    reader.terminal.writer().flush()
+  }
+
+  fun run() {
+    val reader = createReader()
+
     while (true) {
       val line = try {
         reader.readLine("$ ")
       } catch (_: UserInterruptException) {
         break
-      }
-      catch (_: EndOfFileException) {
+      } catch (_: EndOfFileException) {
         break
       }
       val (name, args, standardOutDirection, standardErrDirection) = parser.parse(line)
