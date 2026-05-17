@@ -44,7 +44,7 @@ class Trie(words: List<String> = emptyList()) {
       ?: return null
 
     val prefix = StringBuilder()
-    while (node.children.size == 1) {
+    while (node.children.size == 1 && node.word == null) {
       prefix.append(node.children.keys.first())
       node = node.children.values.first()
     }
