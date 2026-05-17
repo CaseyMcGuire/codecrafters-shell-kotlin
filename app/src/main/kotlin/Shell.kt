@@ -85,15 +85,16 @@ class Shell(
       val matches = possibleMatches
         .filter { it.startsWith(prefix) }
 
-      if (!lastWasTab) {
+      if (matches.size == 1) {
+        reader.buffer.write(matches.first().removePrefix(prefix) + " ")
+      }
+      else if (!lastWasTab) {
         ringBell(reader)
         lastWasTab = true
       } else {
         lastWasTab = false
         if (matches.isEmpty()) {
           ringBell(reader)
-        } else if (matches.size == 1) {
-          reader.buffer.write(matches.first().removePrefix(prefix) + " ")
         } else {
           val writer = reader.terminal.writer()
           writer.println()
