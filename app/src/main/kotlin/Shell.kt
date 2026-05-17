@@ -95,7 +95,12 @@ class Shell(
         } else if (matches.size == 1) {
           reader.buffer.write(matches.first().removePrefix(prefix) + " ")
         } else {
-          reader.printAbove(matches.joinToString("  "))
+          val writer = reader.terminal.writer()
+          writer.println()
+          writer.println(matches.joinToString("  "))
+          writer.flush()
+          reader.callWidget(LineReader.REDRAW_LINE)
+          reader.callWidget(LineReader.REDISPLAY)
         }
       }
       true
