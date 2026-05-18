@@ -237,6 +237,43 @@ class TerminalReaderTest {
   }
 
   @Test
+  fun `arg-position no matching files rings the bell and inserts nothing`(@TempDir cwd: File) {
+    File(cwd, "other.txt").createNewFile()
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat zzz")
+
+    reader.handleTab(editor)
+
+    assertEquals(1, editor.bells)
+    assertEquals(emptyList(), editor.insertions)
+    assertEquals(emptyList(), editor.listings)
+  }
+
+  @Test
+  fun `arg-position empty cwd rings the bell and inserts nothing`(@TempDir cwd: File) {
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat anything")
+
+    reader.handleTab(editor)
+
+    assertEquals(1, editor.bells)
+    assertEquals(emptyList(), editor.insertions)
+  }
+
+  @Test
+  fun `arg-position no matching files inside a subdirectory rings the bell`(@TempDir cwd: File) {
+    val sub = File(cwd, "sub").apply { mkdir() }
+    File(sub, "other.txt").createNewFile()
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat sub/zzz")
+
+    reader.handleTab(editor)
+
+    assertEquals(1, editor.bells)
+    assertEquals(emptyList(), editor.insertions)
+  }
+
+  @Test
   fun `arg-position completes a file inside a relative subdirectory`(@TempDir cwd: File) {
     val sub = File(cwd, "sub").apply { mkdir() }
     File(sub, "report.txt").createNewFile()

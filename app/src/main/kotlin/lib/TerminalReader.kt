@@ -39,7 +39,9 @@ class TerminalReader(
   }
 
   internal fun handleTab(editor: LineEditor) {
-    if (!editor.wasLastBindingTab) lastWasTab = false
+    if (!editor.wasLastBindingTab) {
+      lastWasTab = false
+    }
 
     val words = editor.textBeforeCursor.split(" ")
       .filter { it.isNotEmpty() }
@@ -50,37 +52,9 @@ class TerminalReader(
       return
     }
 
-    if (words.size > 1) {
-      val lastWord = words.last()
-      val (directory, fileName) = if (lastWord.contains("/")) {
-        Pair(
-          Path("${shellState.currentWorkingDirectory}/${lastWord.substringBeforeLast("/")}"),
-          lastWord.substringAfterLast("/")
-        )
-      }
-      else {
-        Pair(Path(shellState.currentWorkingDirectory), lastWord)
-      }
-      val files = directory.listDirectoryEntries()
-        .filter { it.fileName.toString().startsWith(fileName) }
-      if (files.size == 1) {
-        val matchingFile = files.first()
-        val matchingString = if (matchingFile.isRegularFile()) {
-          matchingFile.fileName.toString().removePrefix(fileName) + " "
-        }
-        else {
-          matchingFile.fileName.toString().removePrefix(fileName) + "/"
-        }
-        editor.insertAtCursor(matchingString)
-      }
-      return
-    }
-    else if (words.size == 1 && editor.textBeforeCursor.endsWith(" ")) {
-      val files = Path(shellState.currentWorkingDirectory).listDirectoryEntries()
-        .filter { it.isDirectory() }
-      if (files.size == 1) {
-        editor.insertAtCursor(files.first().fileName.toString() + "/")
-      }
+    val isArgPosition = words.size > 1 || (words.size == 1 && editor.textBeforeCursor.endsWith(" "))
+    if (isArgPosition) {
+      completeArgument(editor, words)
       return
     }
 
@@ -103,6 +77,38 @@ class TerminalReader(
         if (matches.isEmpty()) editor.bell()
         else editor.listBelow(matches.joinToString("  "))
       }
+    }
+  }
+
+  /**
+   * Complete a filename or directory name against the current working directory (or a
+   * relative subdirectory). [words] is the whitespace-split prefix typed so far; if the
+   * cursor is right after a trailing space (i.e. the last word has been "closed off"),
+   * we fall back to listing dirs in cwd.
+   */
+  private fun completeArgument(editor: LineEditor, words: List<String>) {
+    val cursorAtTrailingSpace = editor.textBeforeCursor.endsWith(" ")
+    val (directory, fileNamePrefix) = when {
+      cursorAtTrailingSpace -> Path(shellState.currentWorkingDirectory) to ""
+      words.last().contains("/") -> Pair(
+        Path("${shellState.currentWorkingDirectory}/${words.last().substringBeforeLast("/")}"),
+        words.last().substringAfterLast("/"),
+      )
+      else -> Path(shellState.currentWorkingDirectory) to words.last()
+    }
+
+    val matches = directory.listDirectoryEntries()
+      .filter { it.fileName.toString().startsWith(fileNamePrefix) }
+      .let { if (cursorAtTrailingSpace) it.filter { entry -> entry.isDirectory() } else it }
+
+    if (matches.isEmpty()) {
+      editor.bell()
+    }
+    else if (matches.size == 1) {
+      val match = matches.first()
+      val suffix = match.fileName.toString().removePrefix(fileNamePrefix)
+      val trailing = if (match.isRegularFile()) " " else "/"
+      editor.insertAtCursor(suffix + trailing)
     }
   }
 
