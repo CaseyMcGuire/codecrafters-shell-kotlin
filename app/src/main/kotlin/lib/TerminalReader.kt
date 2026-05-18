@@ -51,8 +51,13 @@ class TerminalReader(
 
     if (words.size > 1) {
       val lastWord = words.last()
-      val currentWorkingDirectoryPath = Path(shellState.currentWorkingDirectory)
-      val files = currentWorkingDirectoryPath.listDirectoryEntries()
+      val directory = if (lastWord.contains("/")) {
+        Path("${shellState.currentWorkingDirectory}/$lastWord")
+      }
+      else {
+        Path(shellState.currentWorkingDirectory)
+      }
+      val files = directory.listDirectoryEntries()
         .filter { it.isRegularFile() }
         .filter { it.fileName.toString().startsWith(lastWord) }
       if (files.size == 1) {
