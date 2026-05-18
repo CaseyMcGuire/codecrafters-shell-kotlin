@@ -177,16 +177,63 @@ class TerminalReaderTest {
   }
 
   @Test
-  fun `arg-position ignores directories when matching files`(@TempDir cwd: File) {
+  fun `arg-position counts files and directories together when matching`(@TempDir cwd: File) {
     File(cwd, "report.txt").createNewFile()
-    File(cwd, "reports").mkdir()        // directory should be excluded
+    File(cwd, "reports").mkdir()
     val reader = readerWithCwd(cwd.absolutePath, "cat")
     val editor = FakeLineEditor(textBeforeCursor = "cat rep")
 
     reader.handleTab(editor)
 
-    // Only the regular file matches, so single-match insertion fires.
+    // Both the file and the directory match "rep", so size != 1 and nothing is inserted.
+    assertEquals(emptyList(), editor.insertions)
+  }
+
+  @Test
+  fun `arg-position single directory match inserts with trailing slash`(@TempDir cwd: File) {
+    File(cwd, "reports").mkdir()
+    val reader = readerWithCwd(cwd.absolutePath, "cd")
+    val editor = FakeLineEditor(textBeforeCursor = "cd rep")
+
+    reader.handleTab(editor)
+
+    assertEquals(listOf("orts/"), editor.insertions)
+  }
+
+  @Test
+  fun `arg-position single file match still inserts with trailing space`(@TempDir cwd: File) {
+    File(cwd, "report.txt").createNewFile()
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+
+    reader.handleTab(editor)
+
     assertEquals(listOf("ort.txt "), editor.insertions)
+  }
+
+  @Test
+  fun `arg-position single directory match inside a subdirectory inserts with trailing slash`(@TempDir cwd: File) {
+    val sub = File(cwd, "sub").apply { mkdir() }
+    File(sub, "deeper").mkdir()
+    val reader = readerWithCwd(cwd.absolutePath, "cd")
+    val editor = FakeLineEditor(textBeforeCursor = "cd sub/dee")
+
+    reader.handleTab(editor)
+
+    assertEquals(listOf("per/"), editor.insertions)
+  }
+
+  @Test
+  fun `tab with cursor right after a trailing space completes files not commands`(@TempDir cwd: File) {
+    // Reproduces tester #LC6: typed "tree " (with trailing space), pressed Tab.
+    // cwd contains a directory "owl"; expectation is to complete the arg to "owl/".
+    File(cwd, "owl").mkdir()
+    val reader = readerWithCwd(cwd.absolutePath, "tree")
+    val editor = FakeLineEditor(textBeforeCursor = "tree ")
+
+    reader.handleTab(editor)
+
+    assertEquals(listOf("owl/"), editor.insertions)
   }
 
   @Test

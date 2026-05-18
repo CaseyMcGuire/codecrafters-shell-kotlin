@@ -12,6 +12,7 @@ import org.jline.reader.impl.DefaultParser
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
 import kotlin.io.path.Path
+import kotlin.io.path.isDirectory
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.listDirectoryEntries
 
@@ -71,6 +72,14 @@ class TerminalReader(
           matchingFile.fileName.toString().removePrefix(fileName) + "/"
         }
         editor.insertAtCursor(matchingString)
+      }
+      return
+    }
+    else if (words.size == 1 && editor.textBeforeCursor.endsWith(" ")) {
+      val files = Path(shellState.currentWorkingDirectory).listDirectoryEntries()
+        .filter { it.isDirectory() }
+      if (files.size == 1) {
+        editor.insertAtCursor(files.first().fileName.toString() + "/")
       }
       return
     }
