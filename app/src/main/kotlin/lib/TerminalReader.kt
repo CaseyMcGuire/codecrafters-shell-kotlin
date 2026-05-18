@@ -51,17 +51,17 @@ class TerminalReader(
 
     if (words.size > 1) {
       val lastWord = words.last()
-      val directory = if (lastWord.contains("/")) {
-        Path("${shellState.currentWorkingDirectory}/$lastWord")
+      val (directory, fileName) = if (lastWord.contains("/")) {
+        Pair(Path("${shellState.currentWorkingDirectory}/$lastWord"), lastWord.substringAfterLast("/"))
       }
       else {
-        Path(shellState.currentWorkingDirectory)
+        Pair(Path(shellState.currentWorkingDirectory), lastWord)
       }
       val files = directory.listDirectoryEntries()
         .filter { it.isRegularFile() }
         .filter { it.fileName.toString().startsWith(lastWord) }
       if (files.size == 1) {
-        editor.insertAtCursor(files.first().fileName.toString().removePrefix(lastWord) + " ")
+        editor.insertAtCursor(files.first().fileName.toString().removePrefix(fileName) + " ")
       }
       return
     }
