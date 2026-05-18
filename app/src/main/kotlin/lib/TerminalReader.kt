@@ -62,7 +62,7 @@ class TerminalReader(
       }
       val files = directory.listDirectoryEntries()
         .filter { it.isRegularFile() }
-        .filter { it.fileName.toString().startsWith(lastWord) }
+        .filter { it.fileName.toString().startsWith(fileName) }
       if (files.size == 1) {
         editor.insertAtCursor(files.first().fileName.toString().removePrefix(fileName) + " ")
       }

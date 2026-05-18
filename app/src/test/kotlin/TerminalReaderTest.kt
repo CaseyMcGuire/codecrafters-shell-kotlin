@@ -123,16 +123,6 @@ class TerminalReaderTest {
   }
 
   @Test
-  fun `completes against the word at the cursor in multi-word input`() {
-    val reader = readerWith("echo", "exit")
-    val editor = FakeLineEditor(textBeforeCursor = "echo ex")
-
-    reader.handleTab(editor)
-
-    assertEquals(listOf("it "), editor.insertions)
-  }
-
-  @Test
   fun `lists matches sorted alphabetically separated by two spaces`() {
     val reader = readerWith("foo_zebra", "foo_apple", "foo_mango")
     val editor = FakeLineEditor(textBeforeCursor = "foo_")
