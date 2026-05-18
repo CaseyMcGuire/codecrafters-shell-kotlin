@@ -19,7 +19,7 @@ class TerminalReaderTest {
   }
 
   private fun readerWith(vararg completions: String) =
-    TerminalReader(completions = completions.toList())
+    TerminalReader(completions = completions.toList(), shellState = ShellState())
 
   @Test
   fun `empty prefix rings the bell`() {

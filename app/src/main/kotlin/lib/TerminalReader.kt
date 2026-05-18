@@ -1,5 +1,6 @@
 package lib
 
+import ShellState
 import datastructures.Trie
 import org.jline.reader.EndOfFileException
 import org.jline.reader.LineReader
@@ -10,10 +11,14 @@ import org.jline.reader.Widget
 import org.jline.reader.impl.DefaultParser
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
+import kotlin.io.path.Path
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.listDirectoryEntries
 
 class TerminalReader(
   completions: List<String>,
   private val terminal: Terminal = TerminalBuilder.builder().build(),
+  private val shellState: ShellState,
   private val trie: Trie = Trie(completions.distinct()),
 ) {
   private val reader: LineReader = buildReader()
@@ -32,17 +37,27 @@ class TerminalReader(
     null
   }
 
-  /**
-   * Tab-completion algorithm. Exposed internal for tests — pass a fake [LineEditor] to verify
-   * which actions (insert / bell / list) fire in which state.
-   */
   internal fun handleTab(editor: LineEditor) {
     if (!editor.wasLastBindingTab) lastWasTab = false
 
-    val prefix = editor.textBeforeCursor.takeLastWhile { !it.isWhitespace() }
+    val words = editor.textBeforeCursor.split(" ")
+      .filter { it.isNotEmpty() }
+    val prefix = words.lastOrNull() ?: ""
     if (prefix.isEmpty()) {
       editor.bell()
       lastWasTab = false
+      return
+    }
+
+    if (words.size > 1) {
+      val lastWord = words.last()
+      val currentWorkingDirectoryPath = Path(shellState.currentWorkingDirectory)
+      val files = currentWorkingDirectoryPath.listDirectoryEntries()
+        .filter { it.isRegularFile() }
+        .filter { it.fileName.toString().startsWith(lastWord) }
+      if (files.size == 1) {
+        editor.insertAtCursor(files.first().fileName.toString().removePrefix(lastWord) + " ")
+      }
       return
     }
 

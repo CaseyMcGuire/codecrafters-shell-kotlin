@@ -39,6 +39,7 @@ class Shell(
   fun run() {
     val terminalReader = TerminalReader(
       completions = pathUtil.executablesOnPath + builtins.map { it.text },
+      shellState = shellState,
     )
 
     while (true) {
