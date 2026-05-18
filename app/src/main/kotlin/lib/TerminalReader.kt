@@ -17,6 +17,8 @@ class TerminalReader(
   private val trie: Trie = Trie(completions.distinct()),
 ) {
   private val reader: LineReader = buildReader()
+  private val editor: LineEditor = JLineEditor(reader, terminal)
+  private var lastWasTab = false
 
   /**
    * Read one line of input from the user. Returns null if the user signals end-of-input
@@ -30,6 +32,42 @@ class TerminalReader(
     null
   }
 
+  /**
+   * Tab-completion algorithm. Exposed internal for tests — pass a fake [LineEditor] to verify
+   * which actions (insert / bell / list) fire in which state.
+   */
+  internal fun handleTab(editor: LineEditor) {
+    if (!editor.wasLastBindingTab) lastWasTab = false
+
+    val prefix = editor.textBeforeCursor.takeLastWhile { !it.isWhitespace() }
+    if (prefix.isEmpty()) {
+      editor.bell()
+      lastWasTab = false
+      return
+    }
+
+    val matches = trie.getWordsWithPrefix(prefix).sorted()
+    val longestCommonPrefix = trie.getLongestCommonPrefix(prefix)
+
+    when {
+      matches.size == 1 -> {
+        editor.insertAtCursor(matches.first().removePrefix(prefix) + " ")
+      }
+      longestCommonPrefix != null -> {
+        editor.insertAtCursor(longestCommonPrefix)
+      }
+      !lastWasTab -> {
+        editor.bell()
+        lastWasTab = true
+      }
+      else -> {
+        lastWasTab = false
+        if (matches.isEmpty()) editor.bell()
+        else editor.listBelow(matches.joinToString("  "))
+      }
+    }
+  }
+
   private fun buildReader(): LineReader {
     val jlineParser = DefaultParser().apply { escapeChars = charArrayOf() }
     val reader = LineReaderBuilder.builder()
@@ -39,63 +77,15 @@ class TerminalReader(
       .option(LineReader.Option.LIST_AMBIGUOUS, true)
       .build()
 
-    var lastWasTab = false
     reader.widgets[WIDGET_KEY] = Widget {
-      if (reader.lastBinding != "\t") {
-        lastWasTab = false
-      }
-      val prefix = reader.buffer.upToCursor().takeLastWhile { !it.isWhitespace() }
-      if (prefix.isEmpty()) {
-        ringBell()
-        lastWasTab = false
-        return@Widget true
-      }
-
-      val matches = trie.getWordsWithPrefix(prefix).sorted()
-      val longestCommonPrefix = trie.getLongestCommonPrefix(prefix)
-
-      when {
-        matches.size == 1 -> {
-          reader.buffer.write(matches.first().removePrefix(prefix) + " ")
-        }
-        longestCommonPrefix != null -> {
-          reader.buffer.write(longestCommonPrefix)
-        }
-        !lastWasTab -> {
-          ringBell()
-          lastWasTab = true
-        }
-        else -> {
-          lastWasTab = false
-          if (matches.isEmpty()) {
-            ringBell()
-          } else {
-            printBelow(matches.joinToString("  "))
-          }
-        }
-      }
+      handleTab(editor)
       true
     }
     reader.keyMaps["main"]!!.bind(Reference(WIDGET_KEY), "\t")
     return reader
   }
 
-  private fun ringBell() {
-    terminal.writer().write(BELL)
-    terminal.writer().flush()
-  }
-
-  private fun printBelow(text: String) {
-    val writer = terminal.writer()
-    writer.println()
-    writer.println(text)
-    writer.flush()
-    reader.callWidget(LineReader.REDRAW_LINE)
-    reader.callWidget(LineReader.REDISPLAY)
-  }
-
   companion object {
-    private const val BELL = ""
     private const val WIDGET_KEY = "path-complete"
   }
 }
