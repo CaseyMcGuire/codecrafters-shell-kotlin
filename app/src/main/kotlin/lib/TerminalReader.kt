@@ -52,7 +52,10 @@ class TerminalReader(
     if (words.size > 1) {
       val lastWord = words.last()
       val (directory, fileName) = if (lastWord.contains("/")) {
-        Pair(Path("${shellState.currentWorkingDirectory}/$lastWord"), lastWord.substringAfterLast("/"))
+        Pair(
+          Path("${shellState.currentWorkingDirectory}/${lastWord.substringBeforeLast("/")}"),
+          lastWord.substringAfterLast("/")
+        )
       }
       else {
         Pair(Path(shellState.currentWorkingDirectory), lastWord)

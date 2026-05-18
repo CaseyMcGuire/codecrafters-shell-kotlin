@@ -1,5 +1,7 @@
 import lib.LineEditor
 import lib.TerminalReader
+import org.junit.jupiter.api.io.TempDir
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -142,5 +144,83 @@ class TerminalReaderTest {
     reader.handleTab(editor)
 
     assertEquals(listOf("foo_apple  foo_mango  foo_zebra"), editor.listings)
+  }
+
+  private fun readerWithCwd(cwd: String, vararg completions: String) =
+    TerminalReader(
+      completions = completions.toList(),
+      shellState = ShellState(currentWorkingDirectory = cwd),
+    )
+
+  @Test
+  fun `arg-position single file match in cwd inserts the suffix with trailing space`(@TempDir cwd: File) {
+    File(cwd, "report.txt").createNewFile()
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+
+    reader.handleTab(editor)
+
+    assertEquals(listOf("ort.txt "), editor.insertions)
+  }
+
+  @Test
+  fun `arg-position with multiple matching files does not insert`(@TempDir cwd: File) {
+    File(cwd, "report.txt").createNewFile()
+    File(cwd, "report2.txt").createNewFile()
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+
+    reader.handleTab(editor)
+
+    assertEquals(emptyList(), editor.insertions)
+  }
+
+  @Test
+  fun `arg-position with no matching files does not insert`(@TempDir cwd: File) {
+    File(cwd, "other.txt").createNewFile()
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat nope")
+
+    reader.handleTab(editor)
+
+    assertEquals(emptyList(), editor.insertions)
+  }
+
+  @Test
+  fun `arg-position ignores directories when matching files`(@TempDir cwd: File) {
+    File(cwd, "report.txt").createNewFile()
+    File(cwd, "reports").mkdir()        // directory should be excluded
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+
+    reader.handleTab(editor)
+
+    // Only the regular file matches, so single-match insertion fires.
+    assertEquals(listOf("ort.txt "), editor.insertions)
+  }
+
+  @Test
+  fun `arg-position completes a file inside a relative subdirectory`(@TempDir cwd: File) {
+    val sub = File(cwd, "sub").apply { mkdir() }
+    File(sub, "report.txt").createNewFile()
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat sub/rep")
+
+    reader.handleTab(editor)
+
+    assertEquals(listOf("ort.txt "), editor.insertions)
+  }
+
+  @Test
+  fun `arg-position never falls through to command completion`(@TempDir cwd: File) {
+    // "cat ec" would otherwise match the "echo" builtin if the command-completion
+    // branch ran. The arg-position branch must return early.
+    val reader = readerWithCwd(cwd.absolutePath, "echo")
+    val editor = FakeLineEditor(textBeforeCursor = "cat ec")
+
+    reader.handleTab(editor)
+
+    assertEquals(emptyList(), editor.insertions)
+    assertEquals(0, editor.bells)
   }
 }
