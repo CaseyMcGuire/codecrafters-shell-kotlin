@@ -61,10 +61,16 @@ class TerminalReader(
         Pair(Path(shellState.currentWorkingDirectory), lastWord)
       }
       val files = directory.listDirectoryEntries()
-        .filter { it.isRegularFile() }
         .filter { it.fileName.toString().startsWith(fileName) }
       if (files.size == 1) {
-        editor.insertAtCursor(files.first().fileName.toString().removePrefix(fileName) + " ")
+        val matchingFile = files.first()
+        val matchingString = if (matchingFile.isRegularFile()) {
+          matchingFile.fileName.toString().removePrefix(fileName) + " "
+        }
+        else {
+          matchingFile.fileName.toString().removePrefix(fileName) + "/"
+        }
+        editor.insertAtCursor(matchingString)
       }
       return
     }
