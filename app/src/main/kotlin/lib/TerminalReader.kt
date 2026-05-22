@@ -108,6 +108,9 @@ class TerminalReader(
       .let { if (cursorAtTrailingSpace) it.filter { entry -> entry.isDirectory() } else it }
       .sortedBy { it.fileName.toString() }
 
+    val trie = Trie(matches.map { it.fileName.toString() })
+    val longestCommonPrefix = trie.getLongestCommonPrefix(fileNamePrefix)
+
     if (matches.isEmpty()) {
       editor.bell()
     }
@@ -116,6 +119,9 @@ class TerminalReader(
       val suffix = match.fileName.toString().removePrefix(fileNamePrefix)
       val trailing = if (match.isRegularFile()) " " else "/"
       editor.insertAtCursor(suffix + trailing)
+    }
+    else if (longestCommonPrefix != null) {
+      editor.insertAtCursor(longestCommonPrefix)
     }
     else {
       if (!lastWasTab) {
