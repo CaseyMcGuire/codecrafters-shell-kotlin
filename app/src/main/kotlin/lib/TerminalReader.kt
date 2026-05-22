@@ -116,11 +116,12 @@ class TerminalReader(
         lastWasTab = true
       }
       else {
-        editor.listBelow(
-          matches
-            .map { if (it.isDirectory()) "${it}/" else it }
-            .joinToString("  ")
-        )
+        val entries = matches
+          .map { if (it.isDirectory()) "${it}/" else it.toString() }
+          .joinToString(" ") {
+            it.removePrefix(shellState.currentWorkingDirectory)
+          }
+        editor.listBelow(entries)
       }
     }
   }
