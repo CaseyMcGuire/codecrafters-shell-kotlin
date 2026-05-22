@@ -111,11 +111,17 @@ class TerminalReader(
       editor.insertAtCursor(suffix + trailing)
     }
     else {
-      editor.listBelow(
-        matches
-          .map { if (it.isDirectory()) "${it}/" else it }
-        .joinToString("  ")
-      )
+      if (!lastWasTab) {
+        editor.bell()
+        lastWasTab = true
+      }
+      else {
+        editor.listBelow(
+          matches
+            .map { if (it.isDirectory()) "${it}/" else it }
+            .joinToString("  ")
+        )
+      }
     }
   }
 
