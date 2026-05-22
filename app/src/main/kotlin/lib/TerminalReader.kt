@@ -94,13 +94,21 @@ class TerminalReader(
    */
   private fun completeArgument(editor: LineEditor, words: List<String>) {
     val cursorAtTrailingSpace = editor.textBeforeCursor.endsWith(" ")
+    val currentWorkingDirectory = Path(shellState.currentWorkingDirectory)
     val (directory, fileNamePrefix) = when {
-      cursorAtTrailingSpace -> Path(shellState.currentWorkingDirectory) to ""
-      words.last().contains("/") -> Pair(
-        Path("${shellState.currentWorkingDirectory}/${words.last().substringBeforeLast("/")}"),
-        words.last().substringAfterLast("/"),
-      )
-      else -> Path(shellState.currentWorkingDirectory) to words.last()
+      cursorAtTrailingSpace -> currentWorkingDirectory to ""
+      words.last().contains("/") -> {
+        val argument = words.last()
+        val argumentDirectory = argument.substringBeforeLast("/")
+        val directory = if (argument.startsWith("/") && argumentDirectory.isEmpty()) {
+          Path("/")
+        } else {
+          currentWorkingDirectory.resolve(argumentDirectory).normalize()
+        }
+
+        directory to argument.substringAfterLast("/")
+      }
+      else -> currentWorkingDirectory to words.last()
     }
 
     val matches = directory.listDirectoryEntries()

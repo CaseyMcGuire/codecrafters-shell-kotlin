@@ -70,6 +70,44 @@ class TerminalReaderTest {
   }
 
   @Test
+  fun `LCP extends through chars before the branching point`() {
+    val reader = readerWith("xyz_apple", "xyz_apricot")
+    val editor = FakeLineEditor(textBeforeCursor = "xy")
+
+    reader.handleTab(editor)
+
+    // From "xy", matches diverge at 'p'/'r' after "xyz_ap", so the LCP suffix is "z_ap".
+    assertEquals(listOf("z_ap"), editor.insertions)
+    assertEquals(0, editor.bells)
+    assertEquals(emptyList(), editor.listings)
+  }
+
+  @Test
+  fun `LCP insertion does not ring the bell or list`() {
+    val reader = readerWith("foo_bar_one", "foo_bar_two", "foo_bar_three")
+    val editor = FakeLineEditor(textBeforeCursor = "foo_")
+
+    reader.handleTab(editor)
+
+    assertEquals(listOf("bar_"), editor.insertions)
+    assertEquals(0, editor.bells)
+    assertEquals(emptyList(), editor.listings)
+  }
+
+  @Test
+  fun `LCP insertion does not require a prior tab`() {
+    // No bell-then-extend sequence: a single Tab on an LCP-extendable prefix should
+    // insert immediately, distinguishing this branch from the ambiguous-no-LCP branch.
+    val reader = readerWith("alpha_one", "alpha_two")
+    val editor = FakeLineEditor(textBeforeCursor = "al", wasLastBindingTab = false)
+
+    reader.handleTab(editor)
+
+    assertEquals(listOf("pha_"), editor.insertions)
+    assertEquals(0, editor.bells)
+  }
+
+  @Test
   fun `ambiguous prefix with no further common chars rings bell on first tab`() {
     val reader = readerWith("echo", "exit")
     val editor = FakeLineEditor(textBeforeCursor = "e")
@@ -154,11 +192,11 @@ class TerminalReaderTest {
   }
 
   @Test
-  fun `arg-position with multiple matching files does not insert`(@TempDir cwd: File) {
-    File(cwd, "report.txt").createNewFile()
-    File(cwd, "report2.txt").createNewFile()
+  fun `arg-position with multiple matching files and no common prefix does not insert`(@TempDir cwd: File) {
+    File(cwd, "foo_apple.txt").createNewFile()
+    File(cwd, "foo_mango.txt").createNewFile()
     val reader = readerWithCwd(cwd.absolutePath, "cat")
-    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+    val editor = FakeLineEditor(textBeforeCursor = "cat foo_")
 
     reader.handleTab(editor)
 
@@ -178,14 +216,15 @@ class TerminalReaderTest {
 
   @Test
   fun `arg-position counts files and directories together when matching`(@TempDir cwd: File) {
-    File(cwd, "report.txt").createNewFile()
-    File(cwd, "reports").mkdir()
+    File(cwd, "foo_apple.txt").createNewFile()
+    File(cwd, "foo_mango").mkdir()
     val reader = readerWithCwd(cwd.absolutePath, "cat")
-    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+    val editor = FakeLineEditor(textBeforeCursor = "cat foo_")
 
     reader.handleTab(editor)
 
-    // Both the file and the directory match "rep", so size != 1 and nothing is inserted.
+    // Both the file and the directory match "foo_" with no further common prefix,
+    // so size != 1 and nothing is inserted.
     assertEquals(emptyList(), editor.insertions)
   }
 
@@ -286,11 +325,11 @@ class TerminalReaderTest {
   }
 
   @Test
-  fun `arg-position multiple matches ring the bell on first tab`(@TempDir cwd: File) {
-    File(cwd, "report.txt").createNewFile()
-    File(cwd, "report2.txt").createNewFile()
+  fun `arg-position multiple matches with no common prefix ring the bell on first tab`(@TempDir cwd: File) {
+    File(cwd, "foo_apple.txt").createNewFile()
+    File(cwd, "foo_mango.txt").createNewFile()
     val reader = readerWithCwd(cwd.absolutePath, "cat")
-    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+    val editor = FakeLineEditor(textBeforeCursor = "cat foo_")
 
     reader.handleTab(editor)
 
@@ -301,10 +340,10 @@ class TerminalReaderTest {
 
   @Test
   fun `arg-position multiple matches list on second consecutive tab`(@TempDir cwd: File) {
-    File(cwd, "report.txt").createNewFile()
-    File(cwd, "report2.txt").createNewFile()
+    File(cwd, "foo_apple.txt").createNewFile()
+    File(cwd, "foo_mango.txt").createNewFile()
     val reader = readerWithCwd(cwd.absolutePath, "cat")
-    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+    val editor = FakeLineEditor(textBeforeCursor = "cat foo_")
 
     reader.handleTab(editor)                  // first Tab: bell
     editor.wasLastBindingTab = true
@@ -316,10 +355,10 @@ class TerminalReaderTest {
 
   @Test
   fun `arg-position listing shows directories with a trailing slash and files without`(@TempDir cwd: File) {
-    File(cwd, "report.txt").createNewFile()
-    File(cwd, "reports").mkdir()
+    File(cwd, "foo_apple.txt").createNewFile()
+    File(cwd, "foo_mango").mkdir()
     val reader = readerWithCwd(cwd.absolutePath, "cat")
-    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+    val editor = FakeLineEditor(textBeforeCursor = "cat foo_")
 
     reader.handleTab(editor)
     editor.wasLastBindingTab = true
@@ -327,7 +366,7 @@ class TerminalReaderTest {
 
     val listing = editor.listings.single()
     val entries = listing.split(Regex(" +")).filter { it.isNotEmpty() }.toSet()
-    assertEquals(setOf("report.txt", "reports/"), entries)
+    assertEquals(setOf("foo_apple.txt", "foo_mango/"), entries)
   }
 
   @Test
@@ -350,18 +389,17 @@ class TerminalReaderTest {
 
   @Test
   fun `arg-position listing separates entries with at least one space`(@TempDir cwd: File) {
-    File(cwd, "report.txt").createNewFile()
-    File(cwd, "report2.txt").createNewFile()
+    File(cwd, "foo_apple.txt").createNewFile()
+    File(cwd, "foo_mango.txt").createNewFile()
     val reader = readerWithCwd(cwd.absolutePath, "cat")
-    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+    val editor = FakeLineEditor(textBeforeCursor = "cat foo_")
 
     reader.handleTab(editor)
     editor.wasLastBindingTab = true
     reader.handleTab(editor)
 
     val listing = editor.listings.single()
-    // Each filename should appear with at least one space adjacent to its neighbour.
-    assertEquals(true, Regex("""report(2)?\.txt +report(2)?\.txt""").containsMatchIn(listing))
+    assertEquals(true, Regex("""foo_apple\.txt +foo_mango\.txt""").containsMatchIn(listing))
   }
 
   @Test
