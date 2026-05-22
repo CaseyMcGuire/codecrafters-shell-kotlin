@@ -110,6 +110,13 @@ class TerminalReader(
       val trailing = if (match.isRegularFile()) " " else "/"
       editor.insertAtCursor(suffix + trailing)
     }
+    else {
+      editor.listBelow(
+        matches
+          .map { if (it.isDirectory()) "${it}/" else it }
+        .joinToString("  ")
+      )
+    }
   }
 
   private fun buildReader(): LineReader {

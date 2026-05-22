@@ -295,6 +295,6 @@ class TerminalReaderTest {
     reader.handleTab(editor)
 
     assertEquals(emptyList(), editor.insertions)
-    assertEquals(0, editor.bells)
+    assertEquals(1, editor.bells)
   }
 }
