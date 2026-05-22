@@ -286,6 +286,85 @@ class TerminalReaderTest {
   }
 
   @Test
+  fun `arg-position multiple matches ring the bell on first tab`(@TempDir cwd: File) {
+    File(cwd, "report.txt").createNewFile()
+    File(cwd, "report2.txt").createNewFile()
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+
+    reader.handleTab(editor)
+
+    assertEquals(1, editor.bells)
+    assertEquals(emptyList(), editor.listings)
+    assertEquals(emptyList(), editor.insertions)
+  }
+
+  @Test
+  fun `arg-position multiple matches list on second consecutive tab`(@TempDir cwd: File) {
+    File(cwd, "report.txt").createNewFile()
+    File(cwd, "report2.txt").createNewFile()
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+
+    reader.handleTab(editor)                  // first Tab: bell
+    editor.wasLastBindingTab = true
+    reader.handleTab(editor)                  // second Tab: list
+
+    assertEquals(1, editor.listings.size)
+    assertEquals(1, editor.bells)
+  }
+
+  @Test
+  fun `arg-position listing shows directories with a trailing slash and files without`(@TempDir cwd: File) {
+    File(cwd, "report.txt").createNewFile()
+    File(cwd, "reports").mkdir()
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+
+    reader.handleTab(editor)
+    editor.wasLastBindingTab = true
+    reader.handleTab(editor)
+
+    val listing = editor.listings.single()
+    val entries = listing.split(Regex(" +")).filter { it.isNotEmpty() }.toSet()
+    assertEquals(setOf("report.txt", "reports/"), entries)
+  }
+
+  @Test
+  fun `arg-position listing is sorted alphabetically`(@TempDir cwd: File) {
+    // Intentionally create out of order — listDirectoryEntries gives no ordering guarantee.
+    File(cwd, "foo_zebra").createNewFile()
+    File(cwd, "foo_apple").createNewFile()
+    File(cwd, "foo_mango").createNewFile()
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat foo_")
+
+    reader.handleTab(editor)
+    editor.wasLastBindingTab = true
+    reader.handleTab(editor)
+
+    val listing = editor.listings.single()
+    val entries = listing.split(Regex(" +")).filter { it.isNotEmpty() }
+    assertEquals(listOf("foo_apple", "foo_mango", "foo_zebra"), entries)
+  }
+
+  @Test
+  fun `arg-position listing separates entries with at least one space`(@TempDir cwd: File) {
+    File(cwd, "report.txt").createNewFile()
+    File(cwd, "report2.txt").createNewFile()
+    val reader = readerWithCwd(cwd.absolutePath, "cat")
+    val editor = FakeLineEditor(textBeforeCursor = "cat rep")
+
+    reader.handleTab(editor)
+    editor.wasLastBindingTab = true
+    reader.handleTab(editor)
+
+    val listing = editor.listings.single()
+    // Each filename should appear with at least one space adjacent to its neighbour.
+    assertEquals(true, Regex("""report(2)?\.txt +report(2)?\.txt""").containsMatchIn(listing))
+  }
+
+  @Test
   fun `arg-position never falls through to command completion`(@TempDir cwd: File) {
     // "cat ec" would otherwise match the "echo" builtin if the command-completion
     // branch ran. The arg-position branch must return early.

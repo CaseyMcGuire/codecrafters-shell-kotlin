@@ -55,9 +55,15 @@ class TerminalReader(
     val isArgPosition = words.size > 1 || (words.size == 1 && editor.textBeforeCursor.endsWith(" "))
     if (isArgPosition) {
       completeArgument(editor, words)
-      return
     }
+    else {
+      completeCommand(editor, prefix)
+    }
+  }
 
+  private fun completeCommand(
+    editor: LineEditor,
+    prefix: String) {
     val matches = trie.getWordsWithPrefix(prefix).sorted()
     val longestCommonPrefix = trie.getLongestCommonPrefix(prefix)
 
@@ -100,6 +106,7 @@ class TerminalReader(
     val matches = directory.listDirectoryEntries()
       .filter { it.fileName.toString().startsWith(fileNamePrefix) }
       .let { if (cursorAtTrailingSpace) it.filter { entry -> entry.isDirectory() } else it }
+      .sortedBy { it.fileName.toString() }
 
     if (matches.isEmpty()) {
       editor.bell()
@@ -116,12 +123,9 @@ class TerminalReader(
         lastWasTab = true
       }
       else {
-        val entries = matches
-          .map {
-            val fileName = it.fileName.toString().removePrefix(shellState.currentWorkingDirectory)
-            if (it.isDirectory()) "${fileName}/" else fileName
-          }
-          .joinToString(" ")
+        val entries = matches.joinToString("  ") {
+          if (it.isDirectory()) "${it.fileName}/" else it.fileName.toString()
+        }
         editor.listBelow(entries)
       }
     }
