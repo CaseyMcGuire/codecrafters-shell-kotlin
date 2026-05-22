@@ -1,5 +1,6 @@
 import command.CdCommand
 import command.Command
+import command.CompleteCommand
 import command.EchoCommand
 import command.ExecutionResult
 import command.ExitCommand
@@ -24,6 +25,7 @@ class Shell(
     TypeCommand(resolveBuiltin = ::resolveBuiltin, pathUtil = pathUtil),
     PwdCommand { shellState.currentWorkingDirectory },
     CdCommand(pathUtil, shellState),
+    CompleteCommand()
   )
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
