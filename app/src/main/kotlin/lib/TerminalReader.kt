@@ -117,10 +117,11 @@ class TerminalReader(
       }
       else {
         val entries = matches
-          .map { if (it.isDirectory()) "/${it}/" else "${it}/" }
-          .joinToString(" ") {
-            it.removePrefix("/${shellState.currentWorkingDirectory}")
+          .map {
+            val fileName = it.fileName.toString().removePrefix(shellState.currentWorkingDirectory)
+            if (it.isDirectory()) "${fileName}/" else "${fileName}/"
           }
+          .joinToString(" ")
         editor.listBelow(entries)
       }
     }
