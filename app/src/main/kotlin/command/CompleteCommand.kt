@@ -22,8 +22,10 @@ class CompleteCommand(
         return ExecutionResult()
       }
       firstArg == "-p" -> {
-        val alias = args.getOrNull(1) ?: return ExecutionResult(stderr = "complete: -p: missing completion specification")
-        val path = customCompletionsStore.find(alias) ?: ExecutionResult(stderr = "complete: ${args.getOrNull(1)}: no completion specification")
+        val alias = args.getOrNull(1) ?:
+          return ExecutionResult(stderr = "complete: -p: missing completion specification")
+        val path = customCompletionsStore.find(alias) ?:
+          return ExecutionResult(stderr = "complete: ${args.getOrNull(1)}: no completion specification")
         return ExecutionResult(stdout = "complete -C '${path}' $alias")
       }
     }
