@@ -9,5 +9,7 @@ class CustomCompletionStore {
   fun add(path: Path, alias: String) {
     entries[alias] = path
   }
+
+  fun find(alias: String): Path? = entries[alias]
 }
 

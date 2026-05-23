@@ -19,12 +19,12 @@ class CompleteCommand(
           //return ExecutionResult(stderr = "complete: -C: $pathString: No such file or directory")
         }
         customCompletionsStore.add(path, alias)
-        return ExecutionResult(
-          stdout = "complete -C '${pathString}' $alias"
-        )
+        return ExecutionResult()
       }
       firstArg == "-p" -> {
-        return ExecutionResult(stderr = "complete: ${args.getOrNull(1)}: no completion specification")
+        val alias = args.getOrNull(1) ?: return ExecutionResult(stderr = "complete: -p: missing completion specification")
+        val path = customCompletionsStore.find(alias) ?: ExecutionResult(stderr = "complete: ${args.getOrNull(1)}: no completion specification")
+        return ExecutionResult(stdout = "complete -C '${path}' $alias")
       }
     }
     return ExecutionResult()
