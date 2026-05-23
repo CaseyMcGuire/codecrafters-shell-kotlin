@@ -16,7 +16,7 @@ class CompleteCommand(
         val alias = args.getOrNull(2) ?: return ExecutionResult(stderr = "complete: -C: missing alias")
         val path = Path(pathString)
         if (!path.exists()) {
-          return ExecutionResult(stderr = "complete: -C: $pathString: No such file or directory")
+          //return ExecutionResult(stderr = "complete: -C: $pathString: No such file or directory")
         }
         customCompletionsStore.add(path, alias)
         return ExecutionResult(
