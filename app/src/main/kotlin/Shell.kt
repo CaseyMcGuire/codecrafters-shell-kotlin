@@ -35,9 +35,12 @@ class Shell(
   fun resolveBuiltin(name: String): Command? = byText[name]
 
   fun resolveCommand(name: String): Command? =
-    resolveBuiltin(name) ?: pathUtil.getExecutablePath(name)?.let {
-      NativeCommand(name) { shellState.currentWorkingDirectory }
-    }
+    resolveBuiltin(name)
+      ?: customCompletionsStore.find(name)?.let { nativeCommand(it.toString()) }
+      ?: pathUtil.getExecutablePath(name)?.let { nativeCommand(name) }
+
+  private fun nativeCommand(name: String) =
+    NativeCommand(name) { shellState.currentWorkingDirectory }
 
   fun parse(line: String): command.ParsedLine = parser.parse(line)
 
