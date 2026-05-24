@@ -63,7 +63,7 @@ class TerminalReader(
     val singleWordWithTrailingSpace = words.size == 1 && hasTrailingSpace
     return when {
       prefix.isEmpty() -> TabCompletionType.NONE
-      singleWordWithTrailingSpace && shellState.customCompletions.contains(words.first()) ->
+      words.isNotEmpty() && shellState.customCompletions.contains(words.first()) ->
         TabCompletionType.CUSTOM_COMMAND
       words.size > 1 || singleWordWithTrailingSpace -> TabCompletionType.ARGUMENT
       else -> TabCompletionType.COMMAND
