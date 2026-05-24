@@ -13,12 +13,14 @@ import lib.Parser
 import lib.PathUtil
 import lib.TerminalReader
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 
 class Shell(
   private val pathUtil: PathUtil = PathUtil(),
   private val shellState: ShellState = ShellState(),
 ) {
   private val parser: Parser = Parser()
+  val jobNumber = AtomicInteger(0)
 
 
   val builtins: List<Command> = listOf(
@@ -53,8 +55,14 @@ class Shell(
     while (true) {
       val line = terminalReader.readLine("$ ") ?: break
       val (name, args, standardOutDirection, standardErrDirection) = parser.parse(line)
-      val result = resolveCommand(name)?.execute(name, args)
-        ?: ExecutionResult(stderr = "$name: command not found")
+      val result = if (args.lastOrNull() == "&") {
+        val process = ProcessBuilder(args.dropLast(1)).start()
+        ExecutionResult(stdout = "[${jobNumber.incrementAndGet()}] ${process.pid()}")
+      }
+      else {
+        resolveCommand(name)?.execute(name, args)
+          ?: ExecutionResult(stderr = "$name: command not found")
+      }
 
       emit(result.stdout, standardOutDirection)
       emit(result.stderr, standardErrDirection)
