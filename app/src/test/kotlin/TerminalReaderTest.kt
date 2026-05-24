@@ -454,13 +454,13 @@ class TerminalReaderTest {
 
   @Test
   fun `custom command output has trailing newlines trimmed before insertion`(@TempDir tmp: File) {
-    val script = writeExecutable(tmp, "completer", "printf 'one\\ntwo\\n\\n'")
+    val script = writeExecutable(tmp, "completer", "printf 'hello\\n\\n\\n'")
     val reader = readerWithCustomCompletion("greet", script.toPath())
     val editor = FakeLineEditor(textBeforeCursor = "greet ")
 
     reader.handleTab(editor)
 
-    assertEquals(listOf("one\ntwo "), editor.insertions)
+    assertEquals(listOf("hello "), editor.insertions)
   }
 
   @Test
@@ -522,6 +522,43 @@ class TerminalReaderTest {
 
     // Trailing-space branch: "greet " + " " → "greet  ".
     assertEquals(listOf("greet  "), editor.insertions)
+  }
+
+  @Test
+  fun `custom command always passes exactly three arguments`(@TempDir tmp: File) {
+    val script = writeExecutable(tmp, "completer", "echo \"$#\"")
+    val reader = readerWithCustomCompletion("greet", script.toPath())
+    val editor = FakeLineEditor(textBeforeCursor = "greet ")
+
+    reader.handleTab(editor)
+
+    assertEquals(listOf("3 "), editor.insertions)
+  }
+
+  @Test
+  fun `custom command after trailing space passes empty current word and previous typed word as third arg`(@TempDir tmp: File) {
+    // "greet foo " → $2 should be "", $3 should be "foo" (not "greet").
+    val script = writeExecutable(tmp, "completer", "echo \"<\$2><\$3>\"")
+    val reader = readerWithCustomCompletion("greet", script.toPath())
+    val editor = FakeLineEditor(textBeforeCursor = "greet foo ")
+
+    reader.handleTab(editor)
+
+    assertEquals(listOf("<><foo> "), editor.insertions)
+  }
+
+  @Test
+  fun `custom command with single word and no trailing space passes word as current and empty as previous`(@TempDir tmp: File) {
+    // "greet" alone → $2="greet", $3="".
+    val script = writeExecutable(tmp, "completer", "echo \"<\$2><\$3>\"")
+    val reader = readerWithCustomCompletion("greet", script.toPath())
+    val editor = FakeLineEditor(textBeforeCursor = "greet")
+
+    reader.handleTab(editor)
+
+    // Output is "<greet><>"; currentWord="greet" so removePrefix strips nothing
+    // (output doesn't start with "greet"; the leading "<" prevents the prefix match).
+    assertEquals(listOf("<greet><> "), editor.insertions)
   }
 
   @Test

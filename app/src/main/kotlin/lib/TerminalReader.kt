@@ -76,13 +76,16 @@ class TerminalReader(
   }
 
   private fun handleCustomCommand(editor: LineEditor, hasTrailingSpace: Boolean, words: List<String>) {
-    val command = shellState.customCompletions[words.first()]!!
     val alias = words.first()
-    val last = if (words.size >= 2) words.lastOrNull() else ""
-    val secondFromLast = if (words.size >= 2) words.getOrNull(words.size - 2) else ""
-    val args = listOfNotNull(alias, last, secondFromLast)
+    val command = shellState.customCompletions[alias]!!
+    val currentWord = if (hasTrailingSpace) "" else words.last()
+    val previousWord = when {
+      hasTrailingSpace -> words.last()
+      words.size >= 2 -> words[words.size - 2]
+      else -> ""
+    }
 
-    val process = ProcessBuilder(command.toString(), *args.toTypedArray())
+    val process = ProcessBuilder(command.toString(), alias, currentWord, previousWord)
     process.environment()[COMPLETION_LINE] = editor.textBeforeCursor
     process.environment()[COMPLETION_POINT] = editor.textBeforeCursor.length.toString()
     val output = process
@@ -98,7 +101,12 @@ class TerminalReader(
     else {
       val completions = output.split("\n")
       if (completions.size > 1) {
-        if (lastWasTab) {
+        val trie = Trie(completions)
+        val longestCommonPrefix = trie.getLongestCommonPrefix(currentWord)
+        if (!hasTrailingSpace && longestCommonPrefix != null) {
+          editor.insertAtCursor(longestCommonPrefix.removePrefix(previousWord))
+        }
+        else if (lastWasTab) {
           editor.listBelow(completions.joinToString("  "))
           lastWasTab = false
         }
@@ -107,11 +115,8 @@ class TerminalReader(
           lastWasTab = true
         }
       }
-      else if (hasTrailingSpace) {
-        editor.insertAtCursor("$output ")
-      }
       else {
-        editor.insertAtCursor(output.removePrefix(last ?: "") + " ")
+        editor.insertAtCursor(output.removePrefix(currentWord) + " ")
       }
     }
   }
