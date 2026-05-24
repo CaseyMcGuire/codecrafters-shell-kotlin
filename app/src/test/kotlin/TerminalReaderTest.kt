@@ -414,4 +414,77 @@ class TerminalReaderTest {
     assertEquals(emptyList(), editor.insertions)
     assertEquals(1, editor.bells)
   }
+
+  private fun writeExecutable(dir: File, name: String, body: String): File {
+    val file = File(dir, name)
+    file.writeText("#!/bin/sh\n$body\n")
+    file.setExecutable(true)
+    return file
+  }
+
+  private fun readerWithCustomCompletion(alias: String, scriptPath: java.nio.file.Path): TerminalReader {
+    val state = ShellState()
+    state.customCompletions[alias] = scriptPath
+    return TerminalReader(completions = listOf(alias), shellState = state)
+  }
+
+  @Test
+  fun `custom command inserts script stdout with trailing space`(@TempDir tmp: File) {
+    val script = writeExecutable(tmp, "completer", "echo hello")
+    val reader = readerWithCustomCompletion("greet", script.toPath())
+    val editor = FakeLineEditor(textBeforeCursor = "greet ")
+
+    reader.handleTab(editor)
+
+    assertEquals(listOf("hello "), editor.insertions)
+    assertEquals(0, editor.bells)
+  }
+
+  @Test
+  fun `custom command with empty stdout rings the bell and inserts nothing`(@TempDir tmp: File) {
+    val script = writeExecutable(tmp, "completer", "true")
+    val reader = readerWithCustomCompletion("greet", script.toPath())
+    val editor = FakeLineEditor(textBeforeCursor = "greet ")
+
+    reader.handleTab(editor)
+
+    assertEquals(1, editor.bells)
+    assertEquals(emptyList(), editor.insertions)
+  }
+
+  @Test
+  fun `custom command output has trailing newlines trimmed before insertion`(@TempDir tmp: File) {
+    val script = writeExecutable(tmp, "completer", "printf 'one\\ntwo\\n\\n'")
+    val reader = readerWithCustomCompletion("greet", script.toPath())
+    val editor = FakeLineEditor(textBeforeCursor = "greet ")
+
+    reader.handleTab(editor)
+
+    assertEquals(listOf("one\ntwo "), editor.insertions)
+  }
+
+  @Test
+  fun `custom command receives the alias as the first argument`(@TempDir tmp: File) {
+    val script = writeExecutable(tmp, "completer", "echo \"$1\"")
+    val reader = readerWithCustomCompletion("greet", script.toPath())
+    val editor = FakeLineEditor(textBeforeCursor = "greet ")
+
+    reader.handleTab(editor)
+
+    assertEquals(listOf("greet "), editor.insertions)
+  }
+
+  @Test
+  fun `custom command does not fire without trailing space`(@TempDir tmp: File) {
+    // "greet" with no trailing space classifies as COMMAND completion, not CUSTOM_COMMAND,
+    // so the script should not be invoked. The lone completion "greet" matches uniquely,
+    // so the trie path inserts the empty suffix plus a space.
+    val script = writeExecutable(tmp, "completer", "echo SHOULD_NOT_RUN")
+    val reader = readerWithCustomCompletion("greet", script.toPath())
+    val editor = FakeLineEditor(textBeforeCursor = "greet")
+
+    reader.handleTab(editor)
+
+    assertEquals(listOf(" "), editor.insertions)
+  }
 }

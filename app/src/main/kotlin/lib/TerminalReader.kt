@@ -49,7 +49,7 @@ class TerminalReader(
     val hasTrailingSpace = editor.textBeforeCursor.endsWith(" ")
     when (getTabCompletionType(words, prefix, hasTrailingSpace)) {
       TabCompletionType.NONE -> handleEmptyPrefix(editor)
-      TabCompletionType.CUSTOM_COMMAND -> handleCustomCommand(editor, words.first())
+      TabCompletionType.CUSTOM_COMMAND -> handleCustomCommand(editor, words)
       TabCompletionType.ARGUMENT -> completeArgument(editor, words)
       TabCompletionType.COMMAND -> completeCommand(editor, prefix)
     }
@@ -75,9 +75,10 @@ class TerminalReader(
     lastWasTab = false
   }
 
-  private fun handleCustomCommand(editor: LineEditor, word: String) {
-    val command = shellState.customCompletions[word]!!
-    val output = ProcessBuilder(command.toString())
+  private fun handleCustomCommand(editor: LineEditor, words: List<String>) {
+    val command = shellState.customCompletions[words.first()]!!
+
+    val output = ProcessBuilder(command.toString(), *words.toTypedArray())
       .start()
       .inputStream
       .bufferedReader()
