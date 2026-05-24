@@ -56,7 +56,7 @@ class Shell(
       val line = terminalReader.readLine("$ ") ?: break
       val (name, args, standardOutDirection, standardErrDirection) = parser.parse(line)
       val result = if (args.lastOrNull() == "&") {
-        val process = ProcessBuilder(args.dropLast(1)).start()
+        val process = ProcessBuilder("/bin/sh", *args.dropLast(1).toTypedArray()).start()
         ExecutionResult(stdout = "[${jobNumber.incrementAndGet()}] ${process.pid()}")
       }
       else {
