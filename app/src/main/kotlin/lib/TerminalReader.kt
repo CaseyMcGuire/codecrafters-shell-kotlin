@@ -82,7 +82,10 @@ class TerminalReader(
     val secondFromLast = words.getOrNull(words.size - 2)
     val args = listOfNotNull(alias, last, secondFromLast)
 
-    val output = ProcessBuilder(command.toString(), *args.toTypedArray())
+    val process = ProcessBuilder(command.toString(), *args.toTypedArray())
+    process.environment()[COMPLETION_LINE] = editor.textBeforeCursor
+    process.environment()[COMPLETION_POINT] = editor.textBeforeCursor.length.toString()
+    val output = process
       .start()
       .inputStream
       .bufferedReader()
@@ -200,6 +203,8 @@ class TerminalReader(
 
   companion object {
     private const val WIDGET_KEY = "path-complete"
+    private const val COMPLETION_LINE = "COMP_LINE"
+    private const val COMPLETION_POINT = "COMP_POINT"
   }
 
   private enum class TabCompletionType {
