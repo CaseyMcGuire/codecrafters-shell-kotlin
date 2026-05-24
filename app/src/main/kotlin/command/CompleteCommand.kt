@@ -28,6 +28,11 @@ class CompleteCommand(
           return ExecutionResult(stderr = "complete: ${args.getOrNull(1)}: no completion specification")
         return ExecutionResult(stdout = "complete -C '${path}' $alias")
       }
+      firstArg == "-r" -> {
+        val alias = args.getOrNull(1) ?: return ExecutionResult(stderr = "complete: -r: missing completion specification")
+        shellState.customCompletions.remove(alias)
+        return ExecutionResult()
+      }
     }
     return ExecutionResult()
   }
