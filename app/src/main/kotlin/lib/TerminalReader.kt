@@ -99,7 +99,7 @@ class TerminalReader(
       val completions = output.split("\n")
       if (completions.size > 1) {
         if (lastWasTab) {
-          editor.listBelow(output)
+          editor.listBelow(completions.joinToString("  "))
           lastWasTab = false
         }
         else {
