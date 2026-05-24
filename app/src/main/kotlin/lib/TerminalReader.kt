@@ -93,7 +93,7 @@ class TerminalReader(
     }
     else {
       if (hasTrailingSpace) editor.insertAtCursor("$output ")
-      else editor.insertAtCursor(output.removePrefix(last ?: ""))
+      else editor.insertAtCursor(output.removePrefix(last ?: "") + " ")
     }
   }
 
