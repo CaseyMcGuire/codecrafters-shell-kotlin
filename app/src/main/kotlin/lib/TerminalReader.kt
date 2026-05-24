@@ -77,8 +77,12 @@ class TerminalReader(
 
   private fun handleCustomCommand(editor: LineEditor, words: List<String>) {
     val command = shellState.customCompletions[words.first()]!!
+    val alias = words.first()
+    val last = words.lastOrNull()
+    val secondFromLast = words.getOrNull(words.size - 2)
+    val args = listOfNotNull(alias, last, secondFromLast)
 
-    val output = ProcessBuilder(command.toString(), *words.toTypedArray())
+    val output = ProcessBuilder(command.toString(), *args.toTypedArray())
       .start()
       .inputStream
       .bufferedReader()
