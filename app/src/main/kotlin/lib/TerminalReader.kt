@@ -97,6 +97,7 @@ class TerminalReader(
     }
     else {
       val completions = output.split(" ")
+      editor.insertAtCursor(output)
       if (completions.size > 1) {
         if (lastWasTab) {
           editor.listBelow(output)
