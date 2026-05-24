@@ -475,16 +475,64 @@ class TerminalReaderTest {
   }
 
   @Test
-  fun `custom command does not fire without trailing space`(@TempDir tmp: File) {
-    // "greet" with no trailing space classifies as COMMAND completion, not CUSTOM_COMMAND,
-    // so the script should not be invoked. The lone completion "greet" matches uniquely,
-    // so the trie path inserts the empty suffix plus a space.
-    val script = writeExecutable(tmp, "completer", "echo SHOULD_NOT_RUN")
+  fun `custom command fires on partial second word and inserts the suffix beyond what was typed`(@TempDir tmp: File) {
+    // "checkout" starts with the typed "ch", so only the unmatched suffix is inserted.
+    val script = writeExecutable(tmp, "completer", "echo checkout")
     val reader = readerWithCustomCompletion("greet", script.toPath())
-    val editor = FakeLineEditor(textBeforeCursor = "greet")
+    val editor = FakeLineEditor(textBeforeCursor = "greet ch")
 
     reader.handleTab(editor)
 
+    assertEquals(listOf("eckout "), editor.insertions)
+  }
+
+  @Test
+  fun `custom command passes the current word as the second argument`(@TempDir tmp: File) {
+    // Script echoes $2 verbatim — confirms current word reaches the completer.
+    val script = writeExecutable(tmp, "completer", "echo \"$2\"")
+    val reader = readerWithCustomCompletion("greet", script.toPath())
+    val editor = FakeLineEditor(textBeforeCursor = "greet ch")
+
+    reader.handleTab(editor)
+
+    // Script outputs "ch"; current word is "ch", so the inserted suffix is empty + " ".
     assertEquals(listOf(" "), editor.insertions)
+  }
+
+  @Test
+  fun `custom command passes the previous word as the third argument`(@TempDir tmp: File) {
+    // Echo $3 verbatim. With "greet foo bar", $3 should be "foo".
+    val script = writeExecutable(tmp, "completer", "echo \"$3\"")
+    val reader = readerWithCustomCompletion("greet", script.toPath())
+    val editor = FakeLineEditor(textBeforeCursor = "greet foo bar")
+
+    reader.handleTab(editor)
+
+    // Script outputs "foo"; "foo".removePrefix("bar") is "foo" + " " → "foo ".
+    assertEquals(listOf("foo "), editor.insertions)
+  }
+
+  @Test
+  fun `custom command sets COMP_LINE env var to the text before the cursor`(@TempDir tmp: File) {
+    val script = writeExecutable(tmp, "completer", "echo \"\$COMP_LINE\"")
+    val reader = readerWithCustomCompletion("greet", script.toPath())
+    val editor = FakeLineEditor(textBeforeCursor = "greet ")
+
+    reader.handleTab(editor)
+
+    // Trailing-space branch: "greet " + " " → "greet  ".
+    assertEquals(listOf("greet  "), editor.insertions)
+  }
+
+  @Test
+  fun `custom command sets COMP_POINT env var to the cursor offset`(@TempDir tmp: File) {
+    val script = writeExecutable(tmp, "completer", "echo \"\$COMP_POINT\"")
+    val reader = readerWithCustomCompletion("greet", script.toPath())
+    val editor = FakeLineEditor(textBeforeCursor = "greet ")
+
+    reader.handleTab(editor)
+
+    // "greet " is 6 chars → COMP_POINT="6" → insertion "6 ".
+    assertEquals(listOf("6 "), editor.insertions)
   }
 }

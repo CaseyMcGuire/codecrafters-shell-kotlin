@@ -91,12 +91,28 @@ class TerminalReader(
       .bufferedReader()
       .readText()
       .trimEnd('\n')
+
     if (output.isEmpty()) {
       editor.bell()
     }
     else {
-      if (hasTrailingSpace) editor.insertAtCursor("$output ")
-      else editor.insertAtCursor(output.removePrefix(last ?: "") + " ")
+      val completions = output.split(" ")
+      if (completions.size > 1) {
+        if (lastWasTab) {
+           editor.listBelow(output)
+          lastWasTab = false
+        }
+        else {
+          editor.bell()
+          lastWasTab = true
+        }
+      }
+      else if (hasTrailingSpace) {
+        editor.insertAtCursor("$output ")
+      }
+      else {
+        editor.insertAtCursor(output.removePrefix(last ?: "") + " ")
+      }
     }
   }
 
