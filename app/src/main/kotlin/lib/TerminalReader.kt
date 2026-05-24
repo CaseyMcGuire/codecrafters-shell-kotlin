@@ -78,8 +78,8 @@ class TerminalReader(
   private fun handleCustomCommand(editor: LineEditor, hasTrailingSpace: Boolean, words: List<String>) {
     val command = shellState.customCompletions[words.first()]!!
     val alias = words.first()
-    val last = words.lastOrNull()
-    val secondFromLast = words.getOrNull(words.size - 2)
+    val last = if (words.size >= 2) words.lastOrNull() else ""
+    val secondFromLast = if (words.size >= 2) words.getOrNull(words.size - 2) else ""
     val args = listOfNotNull(alias, last, secondFromLast)
 
     val process = ProcessBuilder(command.toString(), *args.toTypedArray())
@@ -99,7 +99,7 @@ class TerminalReader(
       val completions = output.split(" ")
       if (completions.size > 1) {
         if (lastWasTab) {
-           editor.listBelow(output)
+          editor.listBelow(output)
           lastWasTab = false
         }
         else {
