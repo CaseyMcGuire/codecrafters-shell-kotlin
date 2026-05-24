@@ -62,7 +62,12 @@ class TerminalReader(
         .bufferedReader()
         .readText()
         .trimEnd('\n')
-      editor.insertAtCursor("$output ")
+      if (output.isEmpty()) {
+        editor.bell()
+      }
+      else {
+        editor.insertAtCursor("$output ")
+      }
       return
     }
     val isArgPosition = words.size > 1 || (words.size == 1 && editor.textBeforeCursor.endsWith(" "))
