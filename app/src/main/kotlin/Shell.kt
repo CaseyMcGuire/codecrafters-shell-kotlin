@@ -4,6 +4,7 @@ import command.CompleteCommand
 import command.EchoCommand
 import command.ExecutionResult
 import command.ExitCommand
+import command.JobsCommand
 import command.NativeCommand
 import command.OutputDirection
 import command.PwdCommand
@@ -26,7 +27,8 @@ class Shell(
     TypeCommand(resolveBuiltin = ::resolveBuiltin, pathUtil = pathUtil),
     PwdCommand { shellState.currentWorkingDirectory },
     CdCommand(pathUtil, shellState),
-    CompleteCommand(shellState)
+    CompleteCommand(shellState),
+    JobsCommand()
   )
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
