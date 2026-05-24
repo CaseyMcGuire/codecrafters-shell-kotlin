@@ -46,36 +46,48 @@ class TerminalReader(
     val words = editor.textBeforeCursor.split(" ")
       .filter { it.isNotEmpty() }
     val prefix = words.lastOrNull() ?: ""
-    if (prefix.isEmpty()) {
+    val hasTrailingSpace = editor.textBeforeCursor.endsWith(" ")
+    when (getTabCompletionType(words, prefix, hasTrailingSpace)) {
+      TabCompletionType.NONE -> handleEmptyPrefix(editor)
+      TabCompletionType.CUSTOM_COMMAND -> handleCustomCommand(editor, words.first())
+      TabCompletionType.ARGUMENT -> completeArgument(editor, words)
+      TabCompletionType.COMMAND -> completeCommand(editor, prefix)
+    }
+  }
+
+  private fun getTabCompletionType(
+    words: List<String>,
+    prefix: String,
+    hasTrailingSpace: Boolean,
+  ): TabCompletionType {
+    val singleWordWithTrailingSpace = words.size == 1 && hasTrailingSpace
+    return when {
+      prefix.isEmpty() -> TabCompletionType.NONE
+      singleWordWithTrailingSpace && shellState.customCompletions.contains(words.first()) ->
+        TabCompletionType.CUSTOM_COMMAND
+      words.size > 1 || singleWordWithTrailingSpace -> TabCompletionType.ARGUMENT
+      else -> TabCompletionType.COMMAND
+    }
+  }
+
+  private fun handleEmptyPrefix(editor: LineEditor) {
+    editor.bell()
+    lastWasTab = false
+  }
+
+  private fun handleCustomCommand(editor: LineEditor, word: String) {
+    val command = shellState.customCompletions[word]!!
+    val output = ProcessBuilder(command.toString())
+      .start()
+      .inputStream
+      .bufferedReader()
+      .readText()
+      .trimEnd('\n')
+    if (output.isEmpty()) {
       editor.bell()
-      lastWasTab = false
-      return
-    }
-    val isCustomCommand = words.size == 1 &&
-      editor.textBeforeCursor.endsWith(" ") &&
-      shellState.customCompletions.contains(words.first())
-    if (isCustomCommand) {
-      val command = shellState.customCompletions[words.first()]!!
-      val output = ProcessBuilder(command.toString())
-        .start()
-        .inputStream
-        .bufferedReader()
-        .readText()
-        .trimEnd('\n')
-      if (output.isEmpty()) {
-        editor.bell()
-      }
-      else {
-        editor.insertAtCursor("$output ")
-      }
-      return
-    }
-    val isArgPosition = words.size > 1 || (words.size == 1 && editor.textBeforeCursor.endsWith(" "))
-    if (isArgPosition) {
-      completeArgument(editor, words)
     }
     else {
-      completeCommand(editor, prefix)
+      editor.insertAtCursor("$output ")
     }
   }
 
@@ -182,5 +194,12 @@ class TerminalReader(
 
   companion object {
     private const val WIDGET_KEY = "path-complete"
+  }
+
+  private enum class TabCompletionType {
+    NONE,
+    CUSTOM_COMMAND,
+    COMMAND,
+    ARGUMENT,
   }
 }
