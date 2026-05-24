@@ -49,7 +49,7 @@ class TerminalReader(
     val hasTrailingSpace = editor.textBeforeCursor.endsWith(" ")
     when (getTabCompletionType(words, prefix, hasTrailingSpace)) {
       TabCompletionType.NONE -> handleEmptyPrefix(editor)
-      TabCompletionType.CUSTOM_COMMAND -> handleCustomCommand(editor, words)
+      TabCompletionType.CUSTOM_COMMAND -> handleCustomCommand(editor, hasTrailingSpace, words)
       TabCompletionType.ARGUMENT -> completeArgument(editor, words)
       TabCompletionType.COMMAND -> completeCommand(editor, prefix)
     }
@@ -75,7 +75,7 @@ class TerminalReader(
     lastWasTab = false
   }
 
-  private fun handleCustomCommand(editor: LineEditor, words: List<String>) {
+  private fun handleCustomCommand(editor: LineEditor, hasTrailingSpace: Boolean, words: List<String>) {
     val command = shellState.customCompletions[words.first()]!!
     val alias = words.first()
     val last = words.lastOrNull()
@@ -92,7 +92,8 @@ class TerminalReader(
       editor.bell()
     }
     else {
-      editor.insertAtCursor("$output ")
+      if (hasTrailingSpace) editor.insertAtCursor("$output ")
+      else editor.insertAtCursor(output.removePrefix(last ?: ""))
     }
   }
 
