@@ -55,7 +55,14 @@ class TerminalReader(
       editor.textBeforeCursor.endsWith(" ") &&
       shellState.customCompletions.contains(words.first())
     if (isCustomCommand) {
-      editor.acceptLine()
+      val command = shellState.customCompletions[words.first()]!!
+      val output = ProcessBuilder(command.toString())
+        .start()
+        .inputStream
+        .bufferedReader()
+        .readText()
+        .trimEnd('\n')
+      editor.insertAtCursor(output)
       return
     }
     val isArgPosition = words.size > 1 || (words.size == 1 && editor.textBeforeCursor.endsWith(" "))

@@ -14,12 +14,10 @@ class TerminalReaderTest {
     val insertions = mutableListOf<String>()
     var bells = 0
     val listings = mutableListOf<String>()
-    var accepted = false
 
     override fun insertAtCursor(text: String) { insertions += text }
     override fun bell() { bells++ }
     override fun listBelow(text: String) { listings += text }
-    override fun acceptLine() { accepted = true }
   }
 
   private fun readerWith(vararg completions: String) =

@@ -34,10 +34,6 @@ internal class JLineEditor(
     reader.callWidget(LineReader.REDISPLAY)
   }
 
-  override fun acceptLine() {
-    reader.callWidget(LineReader.ACCEPT_LINE)
-  }
-
   companion object {
     private const val BELL = "\u0007"
   }

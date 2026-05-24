@@ -19,7 +19,4 @@ interface LineEditor {
 
   /** Print [text] on a new line below the current prompt, then redraw the prompt + buffer. */
   fun listBelow(text: String)
-
-  /** Submit the current line as if the user pressed Enter. */
-  fun acceptLine()
 }
