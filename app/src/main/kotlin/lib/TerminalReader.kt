@@ -51,7 +51,13 @@ class TerminalReader(
       lastWasTab = false
       return
     }
-
+    val isCustomCommand = words.size == 1 &&
+      editor.textBeforeCursor.endsWith(" ") &&
+      shellState.customCompletions.contains(words.first())
+    if (isCustomCommand) {
+      editor.acceptLine()
+      return
+    }
     val isArgPosition = words.size > 1 || (words.size == 1 && editor.textBeforeCursor.endsWith(" "))
     if (isArgPosition) {
       completeArgument(editor, words)

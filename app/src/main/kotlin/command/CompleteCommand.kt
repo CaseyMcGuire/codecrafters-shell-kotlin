@@ -1,11 +1,11 @@
 package command
 
-import lib.CustomCompletionStore
+import ShellState
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 
 class CompleteCommand(
-  private val customCompletionsStore: CustomCompletionStore
+  private val shellState: ShellState
 ) : Command {
   override val text = "complete"
   override fun execute(name: String, args: List<String>): ExecutionResult {
@@ -18,13 +18,13 @@ class CompleteCommand(
         if (!path.exists()) {
           //return ExecutionResult(stderr = "complete: -C: $pathString: No such file or directory")
         }
-        customCompletionsStore.add(path, alias)
+        shellState.customCompletions[alias] = path
         return ExecutionResult()
       }
       firstArg == "-p" -> {
         val alias = args.getOrNull(1) ?:
           return ExecutionResult(stderr = "complete: -p: missing completion specification")
-        val path = customCompletionsStore.find(alias) ?:
+        val path = shellState.customCompletions[alias] ?:
           return ExecutionResult(stderr = "complete: ${args.getOrNull(1)}: no completion specification")
         return ExecutionResult(stdout = "complete -C '${path}' $alias")
       }

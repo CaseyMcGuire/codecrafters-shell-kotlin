@@ -8,7 +8,6 @@ import command.NativeCommand
 import command.OutputDirection
 import command.PwdCommand
 import command.TypeCommand
-import lib.CustomCompletionStore
 import lib.Parser
 import lib.PathUtil
 import lib.TerminalReader
@@ -17,7 +16,6 @@ import java.io.File
 class Shell(
   private val pathUtil: PathUtil = PathUtil(),
   private val shellState: ShellState = ShellState(),
-  private val customCompletionsStore: CustomCompletionStore = CustomCompletionStore()
 ) {
   private val parser: Parser = Parser()
 
@@ -28,7 +26,7 @@ class Shell(
     TypeCommand(resolveBuiltin = ::resolveBuiltin, pathUtil = pathUtil),
     PwdCommand { shellState.currentWorkingDirectory },
     CdCommand(pathUtil, shellState),
-    CompleteCommand(customCompletionsStore)
+    CompleteCommand(shellState)
   )
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
@@ -36,7 +34,7 @@ class Shell(
 
   fun resolveCommand(name: String): Command? =
     resolveBuiltin(name)
-      ?: customCompletionsStore.find(name)?.let { nativeCommand(it.toString()) }
+      ?: shellState.customCompletions[name]?.let { nativeCommand(it.toString()) }
       ?: pathUtil.getExecutablePath(name)?.let { nativeCommand(name) }
 
   private fun nativeCommand(name: String) =
