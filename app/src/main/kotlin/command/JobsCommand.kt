@@ -17,6 +17,7 @@ class JobsCommand(private val shellState: ShellState) : Command {
       val padding = 24 - processState.status.name.length
       builder.append(processState.status.name.padEnd(padding))
       builder.append(processState.command)
+      lines.add(builder.toString())
     }
     return ExecutionResult(stdout = lines.joinToString("\n"))
   }
