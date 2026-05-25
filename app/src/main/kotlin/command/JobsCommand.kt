@@ -8,14 +8,15 @@ class JobsCommand(private val shellState: ShellState) : Command {
     val lines = mutableListOf<String>()
     val processes = shellState.jobNumberToProcess.values.sortedBy { it.jobNumber }
     val finishedProcesses = processes.filter { it.status == ProcessStatus.DONE }
+    val jobNumbers = processes.map { it.jobNumber }.sorted()
     for (processState in processes) {
       val builder = StringBuilder()
       builder.append("[${processState.jobNumber}]")
       when (processState.jobNumber) {
-        shellState.currentJobNumber.get() -> {
+        jobNumbers.lastOrNull() -> {
           builder.append("+")
         }
-        shellState.currentJobNumber.get() - 1 -> {
+        jobNumbers.getOrNull(jobNumbers.size - 2) -> {
           builder.append("-")
         }
         else -> {
