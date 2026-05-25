@@ -67,7 +67,7 @@ class Shell(
           .redirectOutput(ProcessBuilder.Redirect.INHERIT)
           .redirectError(ProcessBuilder.Redirect.INHERIT)
           .start()
-        val processState = ProcessState(jobNumber, process, line, ProcessStatus.RUNNING)
+        val processState = ProcessState(jobNumber, process.pid(), line, ProcessStatus.RUNNING)
         shellState.jobNumberToProcess[jobNumber] = processState
         process.onExit().thenRun {
           val processState = shellState.jobNumberToProcess[jobNumber]!!
