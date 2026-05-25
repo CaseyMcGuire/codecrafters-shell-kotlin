@@ -58,6 +58,8 @@ class Shell(
       val result = if (args.lastOrNull() == "&") {
         val process = ProcessBuilder( name, *args.dropLast(1).toTypedArray())
           .directory(File(shellState.currentWorkingDirectory))
+          .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+          .redirectError(ProcessBuilder.Redirect.INHERIT)
           .start()
         ExecutionResult(stdout = "[${jobNumber.incrementAndGet()}] ${process.pid()}")
       }
