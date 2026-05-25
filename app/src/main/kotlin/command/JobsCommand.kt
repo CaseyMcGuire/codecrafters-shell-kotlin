@@ -23,14 +23,14 @@ class JobsCommand(private val shellState: ShellState) : Command {
         }
       }
       builder.append(" ")
-      builder.append(processState.status.name.padEnd(24))
+      builder.append(processState.status.text.padEnd(24))
       val commandStr = if (processState.status == ProcessStatus.DONE) {
         processState.command.takeLastWhile { it.isWhitespace() || it == '&' }
       }
       else {
         processState.command
       }
-      builder.append(processState.command)
+      builder.append(commandStr)
       lines.add(builder.toString())
     }
     finishedProcesses.forEach { shellState.jobNumberToProcess.remove(it.jobNumber) }
