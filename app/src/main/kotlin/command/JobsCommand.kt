@@ -19,6 +19,6 @@ class JobsCommand(private val shellState: ShellState) : Command {
       builder.append(processState.command)
       lines.add(builder.toString())
     }
-    return ExecutionResult(stdout = lines.joinToString("\n"))
+    return ExecutionResult(stdout = if (lines.isEmpty()) null else lines.joinToString("\n"))
   }
 }
