@@ -47,6 +47,9 @@ class Shell(
   fun parse(line: String): command.ParsedLine = parser.parse(line)
 
   fun run() {
+    val shutdownHook = Thread { cleanupJobs() }
+    Runtime.getRuntime().addShutdownHook(shutdownHook)
+
     val terminalReader = TerminalReader(
       completions = pathUtil.executablesOnPath + builtins.map { it.text },
       shellState = shellState,
@@ -64,7 +67,7 @@ class Shell(
           .redirectOutput(ProcessBuilder.Redirect.INHERIT)
           .redirectError(ProcessBuilder.Redirect.INHERIT)
           .start()
-        val processState = ProcessState(jobNumber, process.pid(), line, ProcessStatus.RUNNING)
+        val processState = ProcessState(jobNumber, process, line, ProcessStatus.RUNNING)
         shellState.jobNumberToProcess[jobNumber] = processState
         process.onExit().thenRun {
           val processState = shellState.jobNumberToProcess[jobNumber]!!
@@ -89,6 +92,16 @@ class Shell(
         val text = content?.let { "$it\n" } ?: ""
         val file = File(direction.path)
         if (direction.append) file.appendText(text) else file.writeText(text)
+      }
+    }
+  }
+
+  private fun cleanupJobs() {
+    shellState.jobNumberToProcess.values.forEach { job ->
+      ProcessHandle.of(job.pid).ifPresent { handle ->
+        if (handle.isAlive) {
+          handle.destroy()
+        }
       }
     }
   }
