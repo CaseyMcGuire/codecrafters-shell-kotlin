@@ -24,6 +24,12 @@ class JobsCommand(private val shellState: ShellState) : Command {
       }
       builder.append(" ")
       builder.append(processState.status.name.padEnd(24))
+      val commandStr = if (processState.status == ProcessStatus.DONE) {
+        processState.command.takeLastWhile { it.isWhitespace() || it == '&' }
+      }
+      else {
+        processState.command
+      }
       builder.append(processState.command)
       lines.add(builder.toString())
     }
