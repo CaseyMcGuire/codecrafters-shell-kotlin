@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class Shell(
   private val pathUtil: PathUtil = PathUtil(),
   private val shellState: ShellState = ShellState(),
+  private val doneJobCommand: Command = JobsCommand(shellState, doneOnly = true),
 ) {
   private val parser: Parser = Parser()
 
@@ -56,6 +57,7 @@ class Shell(
     )
 
     while (true) {
+      doneJobCommand.execute("jobs", emptyList()).stdout?.let(::println)
       val line = terminalReader.readLine("$ ") ?: break
       val (name, args, standardOutDirection, standardErrDirection) = parser.parse(line)
       val shouldForkProcess = args.lastOrNull() == "&"

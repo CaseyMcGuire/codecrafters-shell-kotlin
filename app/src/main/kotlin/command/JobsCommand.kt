@@ -2,13 +2,15 @@ package command
 
 import ShellState
 
-class JobsCommand(private val shellState: ShellState) : Command {
+class JobsCommand(private val shellState: ShellState, private val doneOnly: Boolean = false) : Command {
   override val text: String = "jobs"
   override fun execute(name: String, args: List<String>): ExecutionResult {
     val lines = mutableListOf<String>()
     val processes = shellState.jobNumberToProcess.values.sortedBy { it.jobNumber }
+      .filter { !doneOnly || it.status == ProcessStatus.DONE }
     val finishedProcesses = processes.filter { it.status == ProcessStatus.DONE }
     val jobNumbers = processes.map { it.jobNumber }.sorted()
+
     for (processState in processes) {
       val builder = StringBuilder()
       builder.append("[${processState.jobNumber}]")
@@ -31,6 +33,7 @@ class JobsCommand(private val shellState: ShellState) : Command {
       else {
         processState.command
       }
+
       builder.append(commandStr)
       lines.add(builder.toString())
     }
