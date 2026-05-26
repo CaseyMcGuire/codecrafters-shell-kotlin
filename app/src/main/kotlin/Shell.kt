@@ -62,7 +62,7 @@ class Shell(
       val (name, args, standardOutDirection, standardErrDirection) = parser.parse(line)
       val shouldForkProcess = args.lastOrNull() == "&"
       val result = if (shouldForkProcess) {
-        val jobNumber = shellState.currentJobNumber.incrementAndGet()
+        val jobNumber = shellState.getNextJobNumber()
 
         val process = ProcessBuilder( name, *args.dropLast(1).toTypedArray())
           .directory(File(shellState.currentWorkingDirectory))

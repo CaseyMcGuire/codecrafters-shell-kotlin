@@ -2,7 +2,10 @@ package command
 
 import ShellState
 
-class JobsCommand(private val shellState: ShellState, private val doneOnly: Boolean = false) : Command {
+class JobsCommand(
+  private val shellState: ShellState,
+  private val doneOnly: Boolean = false
+) : Command {
   override val text: String = "jobs"
   override fun execute(name: String, args: List<String>): ExecutionResult {
     val lines = mutableListOf<String>()
@@ -37,7 +40,10 @@ class JobsCommand(private val shellState: ShellState, private val doneOnly: Bool
       builder.append(commandStr)
       lines.add(builder.toString())
     }
-    finishedProcesses.forEach { shellState.jobNumberToProcess.remove(it.jobNumber) }
+    finishedProcesses.forEach {
+      shellState.jobNumberToProcess.remove(it.jobNumber)
+      shellState.addRetiredJobNumber(it.jobNumber)
+    }
     return ExecutionResult(stdout = if (lines.isEmpty()) null else lines.joinToString("\n"))
   }
 }
