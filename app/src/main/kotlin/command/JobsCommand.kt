@@ -1,15 +1,16 @@
 package command
 
-import ShellState
+import JobsManager
+import ProcessStatus
 
 class JobsCommand(
-  private val shellState: ShellState,
+  private val jobsManager: JobsManager,
   private val doneOnly: Boolean = false
 ) : Command {
   override val text: String = "jobs"
   override fun execute(name: String, args: List<String>): ExecutionResult {
     val lines = mutableListOf<String>()
-    val processes = shellState.jobNumberToProcess.values.sortedBy { it.jobNumber }
+    val processes = jobsManager.jobs()
       .filter { !doneOnly || it.status == ProcessStatus.DONE }
     val finishedProcesses = processes.filter { it.status == ProcessStatus.DONE }
     val jobNumbers = processes.map { it.jobNumber }.sorted()
@@ -40,10 +41,7 @@ class JobsCommand(
       builder.append(commandStr)
       lines.add(builder.toString())
     }
-    finishedProcesses.forEach {
-      shellState.jobNumberToProcess.remove(it.jobNumber)
-      shellState.addRetiredJobNumber(it.jobNumber)
-    }
+    finishedProcesses.forEach { jobsManager.retire(it.jobNumber) }
     return ExecutionResult(stdout = if (lines.isEmpty()) null else lines.joinToString("\n"))
   }
 }

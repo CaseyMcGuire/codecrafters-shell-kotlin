@@ -13,13 +13,12 @@ import lib.Parser
 import lib.PathUtil
 import lib.TerminalReader
 import java.io.File
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 
 class Shell(
   private val pathUtil: PathUtil = PathUtil(),
   private val shellState: ShellState = ShellState(),
-  private val doneJobCommand: Command = JobsCommand(shellState, doneOnly = true),
+  private val jobsManager: JobsManager = JobsManager(),
+  private val doneJobCommand: Command = JobsCommand(jobsManager, doneOnly = true),
 ) {
   private val parser: Parser = Parser()
 
@@ -31,7 +30,7 @@ class Shell(
     PwdCommand { shellState.currentWorkingDirectory },
     CdCommand(pathUtil, shellState),
     CompleteCommand(shellState),
-    JobsCommand(shellState),
+    JobsCommand(jobsManager),
   )
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
@@ -62,19 +61,15 @@ class Shell(
       val (name, args, standardOutDirection, standardErrDirection) = parser.parse(line)
       val shouldForkProcess = args.lastOrNull() == "&"
       val result = if (shouldForkProcess) {
-        val jobNumber = shellState.getNextJobNumber()
+        val jobNumber = jobsManager.nextJobNumber()
 
         val process = ProcessBuilder( name, *args.dropLast(1).toTypedArray())
           .directory(File(shellState.currentWorkingDirectory))
           .redirectOutput(ProcessBuilder.Redirect.INHERIT)
           .redirectError(ProcessBuilder.Redirect.INHERIT)
           .start()
-        val processState = ProcessState(jobNumber, process.pid(), line, ProcessStatus.RUNNING)
-        shellState.jobNumberToProcess[jobNumber] = processState
-        process.onExit().thenRun {
-          val processState = shellState.jobNumberToProcess[jobNumber]!!
-          processState.status = ProcessStatus.DONE
-        }
+        jobsManager.add(ProcessState(jobNumber, process.pid(), line, ProcessStatus.RUNNING))
+        process.onExit().thenRun { jobsManager.markDone(jobNumber) }
         ExecutionResult(stdout = "[${jobNumber}] ${process.pid()}")
       }
       else {
@@ -99,18 +94,6 @@ class Shell(
   }
 
   private fun cleanupJobs() {
-    shellState.jobNumberToProcess.values.forEach { job ->
-      ProcessHandle.of(job.pid).ifPresent { handle ->
-        if (handle.isAlive) {
-          handle.destroy()
-        }
-      }
-    }
+    jobsManager.destroyAliveProcesses()
   }
-}
-
-data class ProcessState(val jobNumber: Int, val pid: Long, val command: String, var status: ProcessStatus)
-enum class ProcessStatus(val text: String) {
-  RUNNING("Running"),
-  DONE("Done"),
 }
