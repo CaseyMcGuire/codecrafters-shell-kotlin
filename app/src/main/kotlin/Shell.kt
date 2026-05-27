@@ -65,13 +65,15 @@ class Shell(
         val processBuilders = parsedCommands.map {
           ProcessBuilder(it.name, *it.args.toTypedArray())
         }
+        processBuilders.last().redirectOutput(ProcessBuilder.Redirect.INHERIT)
+        processBuilders.last().redirectError(ProcessBuilder.Redirect.INHERIT)
         val processes = ProcessBuilder.startPipeline(
           processBuilders
         )
-        val standardOut = processes.last().inputStream.bufferedReader().readText().trimEnd('\n').ifEmpty { null }
-        val standardErr = processes.last().errorStream.bufferedReader().readText().trimEnd('\n').ifEmpty { null }
+        //val standardOut = processes.last().inputStream.bufferedReader().readText().trimEnd('\n').ifEmpty { null }
+        //val standardErr = processes.last().errorStream.bufferedReader().readText().trimEnd('\n').ifEmpty { null }
         processes.last().waitFor()
-        ExecutionResult(standardOut, standardErr)
+        ExecutionResult(null, null)
       }
       else {
         val parsedLine = parsedCommands.single()
