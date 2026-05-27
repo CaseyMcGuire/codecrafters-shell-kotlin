@@ -61,7 +61,7 @@ class Shell(
       val line = terminalReader.readLine("$ ") ?: break
       val parsedCommands = parser.parse(line)
 
-      val result = if (parsedCommands.size > 1) {
+      if (parsedCommands.size > 1) {
         val processBuilders = parsedCommands.map {
           ProcessBuilder(it.name, *it.args.toTypedArray())
         }
@@ -77,11 +77,11 @@ class Shell(
       }
       else {
         val parsedLine = parsedCommands.single()
-        processLine(parsedLine)
+        val result = processLine(parsedLine)
+        emit(result.stdout, parsedCommands.last().standardOutputDirection)
+        emit(result.stderr, parsedCommands.last().standardErrorDirection)
       }
 
-      emit(result.stdout, parsedCommands.last().standardOutputDirection)
-      emit(result.stderr, parsedCommands.last().standardErrorDirection)
     }
   }
 
@@ -96,7 +96,7 @@ class Shell(
         .redirectOutput(ProcessBuilder.Redirect.INHERIT)
         .redirectError(ProcessBuilder.Redirect.INHERIT)
         .start()
-      val displayed = (listOf(name) + args).joinToString(" ")
+      val displayed = (listOf(name) + args.dropLast(1)).joinToString(" ")
       jobsManager.add(ProcessState(jobNumber, process.pid(), displayed, ProcessStatus.RUNNING))
       process.onExit().thenRun { jobsManager.markDone(jobNumber) }
       ExecutionResult(stdout = "[${jobNumber}] ${process.pid()}")
