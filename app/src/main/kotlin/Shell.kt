@@ -7,6 +7,7 @@ import command.ExitCommand
 import command.JobsCommand
 import command.NativeCommand
 import command.OutputDirection
+import command.ParsedCommand
 import command.PwdCommand
 import command.TypeCommand
 import lib.Parser
@@ -44,7 +45,7 @@ class Shell(
   private fun nativeCommand(name: String) =
     NativeCommand(name) { shellState.currentWorkingDirectory }
 
-  fun parse(line: String): command.ParsedLine = parser.parse(line)
+  fun parse(line: String): command.ParsedCommand = parser.parse(line).single()
 
   fun run() {
     val shutdownHook = Thread { cleanupJobs() }
@@ -58,28 +59,51 @@ class Shell(
     while (true) {
       doneJobCommand.execute("jobs", emptyList()).stdout?.let(::println)
       val line = terminalReader.readLine("$ ") ?: break
-      val (name, args, standardOutDirection, standardErrDirection) = parser.parse(line)
-      val shouldForkProcess = args.lastOrNull() == "&"
-      val result = if (shouldForkProcess) {
-        val jobNumber = jobsManager.nextJobNumber()
+      val parsedCommands = parser.parse(line)
 
-        val process = ProcessBuilder( name, *args.dropLast(1).toTypedArray())
-          .directory(File(shellState.currentWorkingDirectory))
-          .redirectOutput(ProcessBuilder.Redirect.INHERIT)
-          .redirectError(ProcessBuilder.Redirect.INHERIT)
-          .start()
-        jobsManager.add(ProcessState(jobNumber, process.pid(), line, ProcessStatus.RUNNING))
-        process.onExit().thenRun { jobsManager.markDone(jobNumber) }
-        ExecutionResult(stdout = "[${jobNumber}] ${process.pid()}")
+      val result = if (parsedCommands.size > 1) {
+        val processBuilders = parsedCommands.map {
+          ProcessBuilder(it.name, *it.args.toTypedArray())
+        }
+        val processes = ProcessBuilder.startPipeline(
+          processBuilders
+        )
+        val standardOut = processes.last().inputStream.bufferedReader().readText()
+        val standardErr = processes.last().errorStream.bufferedReader().readText()
+        processes.last().waitFor()
+        ExecutionResult(standardOut, standardErr)
       }
       else {
-        resolveCommand(name)?.execute(name, args)
-          ?: ExecutionResult(stderr = "$name: command not found")
+        val parsedLine = parsedCommands.single()
+        processLine(parsedLine)
       }
 
-      emit(result.stdout, standardOutDirection)
-      emit(result.stderr, standardErrDirection)
+      emit(result.stdout, parsedCommands.last().standardOutputDirection)
+      emit(result.stderr, parsedCommands.last().standardErrorDirection)
     }
+  }
+
+  private fun processLine(line: ParsedCommand): ExecutionResult {
+    val (name, args) = line
+    val shouldForkProcess = args.lastOrNull() == "&"
+    return if (shouldForkProcess) {
+      val jobNumber = jobsManager.nextJobNumber()
+
+      val process = ProcessBuilder( name, *args.dropLast(1).toTypedArray())
+        .directory(File(shellState.currentWorkingDirectory))
+        .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+        .redirectError(ProcessBuilder.Redirect.INHERIT)
+        .start()
+      val displayed = (listOf(name) + args).joinToString(" ")
+      jobsManager.add(ProcessState(jobNumber, process.pid(), displayed, ProcessStatus.RUNNING))
+      process.onExit().thenRun { jobsManager.markDone(jobNumber) }
+      ExecutionResult(stdout = "[${jobNumber}] ${process.pid()}")
+    }
+    else {
+      resolveCommand(name)?.execute(name, args)
+        ?: ExecutionResult(stderr = "$name: command not found")
+    }
+
   }
 
   private fun emit(content: String?, direction: OutputDirection) {

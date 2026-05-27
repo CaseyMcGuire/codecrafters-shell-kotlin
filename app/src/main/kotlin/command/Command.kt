@@ -7,7 +7,7 @@ interface Command {
 
 data class ExecutionResult(val stdout: String? = null, val stderr: String? = null)
 
-data class ParsedLine(
+data class ParsedCommand(
   val name: String,
   val args: List<String>,
   val standardOutputDirection: OutputDirection,

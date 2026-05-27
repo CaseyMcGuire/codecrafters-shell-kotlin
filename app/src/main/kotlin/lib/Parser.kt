@@ -1,14 +1,29 @@
 package lib
 
 import command.OutputDirection
-import command.ParsedLine
+import command.ParsedCommand
 
 class Parser {
-  fun parse(line: String): ParsedLine {
-    val tokens = mutableListOf<String>()
+  fun parse(line: String): List<ParsedCommand> {
+    val segments = mutableListOf<List<String>>()
+    var tokens = mutableListOf<String>()
     var currentToken = StringBuilder()
     var parseState = ParseState.NONE
     var isEscaped = false
+
+    fun flushToken() {
+      if (currentToken.isNotEmpty()) {
+        tokens.add(currentToken.toString())
+        currentToken = StringBuilder()
+      }
+    }
+
+    fun flushSegment() {
+      flushToken()
+      segments.add(tokens)
+      tokens = mutableListOf()
+    }
+
     for (char in line) {
       if (isEscaped) {
         if (parseState == ParseState.OPEN_DOUBLE_QUOTE) {
@@ -28,10 +43,14 @@ class Parser {
                 else currentToken.append(char)
         ' ' -> {
           if (parseState == ParseState.NONE) {
-            if (currentToken.isNotEmpty()) {
-              tokens.add(currentToken.toString())
-              currentToken = StringBuilder()
-            }
+            flushToken()
+          } else {
+            currentToken.append(char)
+          }
+        }
+        '|' -> {
+          if (parseState == ParseState.NONE) {
+            flushSegment()
           } else {
             currentToken.append(char)
           }
@@ -49,24 +68,29 @@ class Parser {
         else -> currentToken.append(char)
       }
     }
-    if (currentToken.isNotEmpty()) {
-      tokens.add(currentToken.toString())
-    }
+
+    flushSegment()
+
+    return segments.map(::toParsedCommand)
+  }
+
+  private fun toParsedCommand(tokens: List<String>): ParsedCommand {
     val name = tokens.firstOrNull().orEmpty()
+
     return when {
-      tokens.getOrNull(tokens.size - 2) in setOf(">", "1>", "1>>", ">>") -> ParsedLine(
+      tokens.getOrNull(tokens.size - 2) in setOf(">", "1>", "1>>", ">>") -> ParsedCommand(
         name,
         tokens.drop(1).dropLast(2),
         OutputDirection.File(tokens.last(), tokens[tokens.size - 2] in setOf("1>>", ">>")),
         OutputDirection.Print,
       )
-      tokens.getOrNull(tokens.size - 2) in setOf("2>", "2>>") -> ParsedLine(
+      tokens.getOrNull(tokens.size - 2) in setOf("2>", "2>>") -> ParsedCommand(
         name,
         tokens.drop(1).dropLast(2),
         OutputDirection.Print,
         OutputDirection.File(tokens.last(), tokens[tokens.size - 2] == "2>>"),
       )
-      else -> ParsedLine(
+      else -> ParsedCommand(
         name,
         tokens.drop(1),
         OutputDirection.Print,
