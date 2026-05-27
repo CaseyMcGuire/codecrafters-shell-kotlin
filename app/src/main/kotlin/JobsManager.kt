@@ -23,7 +23,23 @@ class JobsManager {
     retiredJobNumbers.add(jobNumber)
   }
 
-  fun jobs(): List<ProcessState> = jobsByNumber.values.sortedBy { it.jobNumber }
+  fun jobs(): List<ProcessState> {
+    // we do this in case there's a race condition between when the job is finished
+    // and when `process.onExit()` runs
+    reapJobs()
+    return jobsByNumber.values.sortedBy { it.jobNumber }
+  }
+
+  fun reapJobs() {
+    jobsByNumber.values.forEach { job ->
+      val isAlive = ProcessHandle.of(job.pid).map { it.isAlive }.orElse(false)
+        ?: false
+      if (job.status == ProcessStatus.RUNNING && !isAlive) {
+        markDone(job.jobNumber)
+      }
+    }
+  }
+
 
   fun destroyAliveProcesses() {
     jobsByNumber.values.forEach { job ->

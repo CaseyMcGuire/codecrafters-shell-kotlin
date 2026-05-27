@@ -70,8 +70,6 @@ class Shell(
         val processes = ProcessBuilder.startPipeline(
           processBuilders
         )
-        //val standardOut = processes.last().inputStream.bufferedReader().readText().trimEnd('\n').ifEmpty { null }
-        //val standardErr = processes.last().errorStream.bufferedReader().readText().trimEnd('\n').ifEmpty { null }
         processes.last().waitFor()
         ExecutionResult(null, null)
       }
