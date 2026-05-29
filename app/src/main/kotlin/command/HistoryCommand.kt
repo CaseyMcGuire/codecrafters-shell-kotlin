@@ -17,7 +17,7 @@ class HistoryCommand(private val history: History) : Command {
     if (args.firstOrNull() == "-r" && args.size >= 2) {
       File(args[1]).readLines().forEach { history.add(it) }
     }
-    else if (args.firstOrNull() == "-2" && args.size >= 2) {
+    else if (args.firstOrNull() == "-w" && args.size >= 2) {
       val file = File(args[1])
       if (!file.exists()) {
         file.createNewFile()
