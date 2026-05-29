@@ -12,7 +12,10 @@ class HistoryCommand(private val previousCommands: List<String>) : Command {
     stdout: PrintStream,
     stderr: PrintStream
   ): Int {
-    previousCommands.forEachIndexed { index, string -> stdout.println("    ${index + 1}  $string") }
+    val limit = args.firstOrNull()?.toIntOrNull() ?: previousCommands.size
+    for (i in previousCommands.size - limit until previousCommands.size) {
+      stdout.println("    ${i + 1}  ${previousCommands[i]}")
+    }
     return 0
   }
 
