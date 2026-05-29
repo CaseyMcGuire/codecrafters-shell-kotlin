@@ -12,7 +12,7 @@ class HistoryCommand(private val previousCommands: List<String>) : Command {
     stdout: PrintStream,
     stderr: PrintStream
   ): Int {
-    previousCommands.forEachIndexed { index, string -> stdout.println("    $index: $string") }
+    previousCommands.forEachIndexed { index, string -> stdout.println("    ${index + 1}: $string") }
     return 0
   }
 
