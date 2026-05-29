@@ -28,6 +28,7 @@ class Shell(
   private val doneJobCommand: Command = JobsCommand(jobsManager, doneOnly = true),
 ) {
   private val parser: Parser = Parser()
+  private val history = mutableListOf<String>()
 
 
   val builtins: List<Command> = listOf(
@@ -38,7 +39,7 @@ class Shell(
     CdCommand(pathUtil, shellState),
     CompleteCommand(shellState),
     JobsCommand(jobsManager),
-    HistoryCommand()
+    HistoryCommand(history),
   )
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
@@ -66,6 +67,7 @@ class Shell(
     while (true) {
       doneJobCommand.execute("jobs", emptyList(), InputStream.nullInputStream(), System.out, System.err)
       val line = terminalReader.readLine("$ ") ?: break
+      history += line
       val parsedCommands = parser.parse(line)
       runPipeline(parsedCommands)
     }
