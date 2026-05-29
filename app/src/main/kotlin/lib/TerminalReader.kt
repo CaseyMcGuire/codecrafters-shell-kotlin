@@ -10,6 +10,7 @@ import org.jline.reader.Reference
 import org.jline.reader.UserInterruptException
 import org.jline.reader.Widget
 import org.jline.reader.impl.DefaultParser
+import org.jline.reader.impl.history.DefaultHistory
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
 import kotlin.io.path.Path
@@ -22,7 +23,7 @@ class TerminalReader(
   private val terminal: Terminal = TerminalBuilder.builder().build(),
   private val shellState: ShellState,
   private val trie: Trie = Trie(completions.distinct()),
-  private val history: History,
+  private val history: History = DefaultHistory(),
 ) {
   private val reader: LineReader = buildReader()
   private val editor: LineEditor = JLineEditor(reader, terminal)

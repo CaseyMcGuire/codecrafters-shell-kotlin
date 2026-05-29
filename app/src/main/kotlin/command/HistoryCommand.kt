@@ -22,7 +22,8 @@ class HistoryCommand(private val history: History) : Command {
       if (!file.exists()) {
         file.createNewFile()
       }
-      for (line in history) {
+
+      for (line in history.map { it.line() }) {
         file.appendText("$line\n")
       }
     }
