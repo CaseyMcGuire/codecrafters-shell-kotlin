@@ -6,11 +6,11 @@ class EchoCommandTest {
 
   @Test
   fun `joins args with single space`() {
-    assertEquals("hello world", EchoCommand().execute("echo", listOf("hello", "world")).stdout)
+    assertEquals("hello world", EchoCommand().runCaptured("echo", listOf("hello", "world")).stdout)
   }
 
   @Test
   fun `with no args returns empty string`() {
-    assertEquals("", EchoCommand().execute("echo", emptyList()).stdout)
+    assertEquals("", EchoCommand().runCaptured("echo", emptyList()).stdout)
   }
 }

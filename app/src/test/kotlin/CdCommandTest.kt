@@ -4,7 +4,6 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 class CdCommandTest {
 
@@ -19,9 +18,9 @@ class CdCommandTest {
   @Test
   fun `cd to a valid absolute path updates the working directory`(@TempDir dir: File) {
     val (cd, state) = cdWith("/")
-    val result = cd.execute("cd", listOf(dir.absolutePath))
+    val result = cd.runCaptured("cd", listOf(dir.absolutePath))
 
-    assertNull(result.stderr)
+    assertEquals("", result.stderr)
     assertEquals(dir.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -30,7 +29,7 @@ class CdCommandTest {
     val (cd, state) = cdWith("/")
     val missing = "/definitely_not_a_real_dir_${System.nanoTime()}"
 
-    val result = cd.execute("cd", listOf(missing))
+    val result = cd.runCaptured("cd", listOf(missing))
 
     assertEquals("cd: $missing: No such file or directory", result.stderr)
     assertEquals("/", state.currentWorkingDirectory)
@@ -39,9 +38,9 @@ class CdCommandTest {
   @Test
   fun `cd with no args is a no-op`() {
     val (cd, state) = cdWith("/")
-    val result = cd.execute("cd", emptyList())
+    val result = cd.runCaptured("cd", emptyList())
 
-    assertNull(result.stderr)
+    assertEquals("", result.stderr)
     assertEquals("/", state.currentWorkingDirectory)
   }
 
@@ -50,9 +49,9 @@ class CdCommandTest {
     val sub = File(dir, "child").apply { mkdir() }
     val (cd, state) = cdWith(dir.absolutePath)
 
-    val result = cd.execute("cd", listOf("child"))
+    val result = cd.runCaptured("cd", listOf("child"))
 
-    assertNull(result.stderr)
+    assertEquals("", result.stderr)
     assertEquals(sub.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -61,9 +60,9 @@ class CdCommandTest {
     val sub = File(dir, "child").apply { mkdir() }
     val (cd, state) = cdWith(sub.absolutePath)
 
-    val result = cd.execute("cd", listOf(".."))
+    val result = cd.runCaptured("cd", listOf(".."))
 
-    assertNull(result.stderr)
+    assertEquals("", result.stderr)
     assertEquals(dir.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -71,9 +70,9 @@ class CdCommandTest {
   fun `cd to dot stays in the same directory`(@TempDir dir: File) {
     val (cd, state) = cdWith(dir.absolutePath)
 
-    val result = cd.execute("cd", listOf("."))
+    val result = cd.runCaptured("cd", listOf("."))
 
-    assertNull(result.stderr)
+    assertEquals("", result.stderr)
     assertEquals(dir.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -82,9 +81,9 @@ class CdCommandTest {
     val sub = File(dir, "child").apply { mkdir() }
     val (cd, state) = cdWith("/")
 
-    val result = cd.execute("cd", listOf("${sub.absolutePath}/../child"))
+    val result = cd.runCaptured("cd", listOf("${sub.absolutePath}/../child"))
 
-    assertNull(result.stderr)
+    assertEquals("", result.stderr)
     assertEquals(sub.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -92,7 +91,7 @@ class CdCommandTest {
   fun `cd to a missing relative path returns an error and does not mutate state`(@TempDir dir: File) {
     val (cd, state) = cdWith(dir.absolutePath)
 
-    val result = cd.execute("cd", listOf("nope"))
+    val result = cd.runCaptured("cd", listOf("nope"))
 
     assertEquals("cd: ${dir.absolutePath}/nope: No such file or directory", result.stderr)
     assertEquals(dir.absolutePath, state.currentWorkingDirectory)
@@ -102,9 +101,9 @@ class CdCommandTest {
   fun `cd ignores arguments past the first`(@TempDir first: File, @TempDir second: File) {
     val (cd, state) = cdWith("/")
 
-    val result = cd.execute("cd", listOf(first.absolutePath, second.absolutePath))
+    val result = cd.runCaptured("cd", listOf(first.absolutePath, second.absolutePath))
 
-    assertNull(result.stderr)
+    assertEquals("", result.stderr)
     assertEquals(first.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -112,9 +111,9 @@ class CdCommandTest {
   fun `cd to tilde goes to the home directory`(@TempDir home: File) {
     val (cd, state) = cdWith(initialCwd = "/", home = home.absolutePath)
 
-    val result = cd.execute("cd", listOf("~"))
+    val result = cd.runCaptured("cd", listOf("~"))
 
-    assertNull(result.stderr)
+    assertEquals("", result.stderr)
     assertEquals(home.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -123,9 +122,9 @@ class CdCommandTest {
     val sub = File(home, "child").apply { mkdir() }
     val (cd, state) = cdWith(initialCwd = "/", home = home.absolutePath)
 
-    val result = cd.execute("cd", listOf("~/child"))
+    val result = cd.runCaptured("cd", listOf("~/child"))
 
-    assertNull(result.stderr)
+    assertEquals("", result.stderr)
     assertEquals(sub.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -133,9 +132,9 @@ class CdCommandTest {
   fun `cd to tilde does not depend on the current working directory`(@TempDir home: File, @TempDir elsewhere: File) {
     val (cd, state) = cdWith(initialCwd = elsewhere.absolutePath, home = home.absolutePath)
 
-    val result = cd.execute("cd", listOf("~"))
+    val result = cd.runCaptured("cd", listOf("~"))
 
-    assertNull(result.stderr)
+    assertEquals("", result.stderr)
     assertEquals(home.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -143,7 +142,7 @@ class CdCommandTest {
   fun `cd to a missing tilde path returns an error and does not mutate state`(@TempDir home: File) {
     val (cd, state) = cdWith(initialCwd = "/", home = home.absolutePath)
 
-    val result = cd.execute("cd", listOf("~/missing"))
+    val result = cd.runCaptured("cd", listOf("~/missing"))
 
     val expected = "${home.absolutePath}/missing"
     assertEquals("cd: $expected: No such file or directory", result.stderr)
@@ -156,9 +155,9 @@ class CdCommandTest {
     val literal = File(cwd, "~bob").apply { mkdir() }
     val (cd, state) = cdWith(initialCwd = cwd.absolutePath, home = home.absolutePath)
 
-    val result = cd.execute("cd", listOf("~bob"))
+    val result = cd.runCaptured("cd", listOf("~bob"))
 
-    assertNull(result.stderr)
+    assertEquals("", result.stderr)
     assertEquals(literal.absolutePath, state.currentWorkingDirectory)
   }
 
@@ -166,7 +165,7 @@ class CdCommandTest {
   fun `cd to a missing tilde-prefixed path is reported with the literal name`(@TempDir cwd: File, @TempDir home: File) {
     val (cd, state) = cdWith(initialCwd = cwd.absolutePath, home = home.absolutePath)
 
-    val result = cd.execute("cd", listOf("~bob"))
+    val result = cd.runCaptured("cd", listOf("~bob"))
 
     assertEquals("cd: ${cwd.absolutePath}/~bob: No such file or directory", result.stderr)
     assertEquals(cwd.absolutePath, state.currentWorkingDirectory)
@@ -178,9 +177,9 @@ class CdCommandTest {
     try {
       val (cd, state) = cdWith(initialCwd = "/", home = home.absolutePath)
 
-      val result = cd.execute("cd", listOf("~/../${sibling.name}"))
+      val result = cd.runCaptured("cd", listOf("~/../${sibling.name}"))
 
-      assertNull(result.stderr)
+      assertEquals("", result.stderr)
       assertEquals(sibling.absolutePath, state.currentWorkingDirectory)
     } finally {
       sibling.delete()

@@ -2,7 +2,6 @@ import command.CdCommand
 import command.Command
 import command.CompleteCommand
 import command.EchoCommand
-import command.ExecutionResult
 import command.ExitCommand
 import command.JobsCommand
 import command.NativeCommand
@@ -14,6 +13,12 @@ import lib.Parser
 import lib.PathUtil
 import lib.TerminalReader
 import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.PipedInputStream
+import java.io.PipedOutputStream
+import java.io.PrintStream
+import kotlin.concurrent.thread
 
 class Shell(
   private val pathUtil: PathUtil = PathUtil(),
@@ -45,7 +50,7 @@ class Shell(
   private fun nativeCommand(name: String) =
     NativeCommand(name) { shellState.currentWorkingDirectory }
 
-  fun parse(line: String): command.ParsedCommand = parser.parse(line).single()
+  fun parse(line: String): ParsedCommand = parser.parse(line).single()
 
   fun run() {
     val shutdownHook = Thread { cleanupJobs() }
@@ -57,64 +62,131 @@ class Shell(
     )
 
     while (true) {
-      doneJobCommand.execute("jobs", emptyList()).stdout?.let(::println)
+      doneJobCommand.execute("jobs", emptyList(), InputStream.nullInputStream(), System.out, System.err)
       val line = terminalReader.readLine("$ ") ?: break
       val parsedCommands = parser.parse(line)
-
-      if (parsedCommands.size > 1) {
-        val processBuilders = parsedCommands.map {
-          ProcessBuilder(it.name, *it.args.toTypedArray())
-        }
-        processBuilders.last().redirectOutput(ProcessBuilder.Redirect.INHERIT)
-        processBuilders.last().redirectError(ProcessBuilder.Redirect.INHERIT)
-        val processes = ProcessBuilder.startPipeline(
-          processBuilders
-        )
-        processes.last().waitFor()
-        ExecutionResult(null, null)
-      }
-      else {
-        val parsedLine = parsedCommands.single()
-        val result = processLine(parsedLine)
-        emit(result.stdout, parsedCommands.last().standardOutputDirection)
-        emit(result.stderr, parsedCommands.last().standardErrorDirection)
-      }
-
+      runPipeline(parsedCommands)
     }
   }
 
-  private fun processLine(line: ParsedCommand): ExecutionResult {
+  private fun runPipeline(stages: List<ParsedCommand>) {
+    val threads = mutableListOf<Thread>()
+    var stdin: InputStream = InputStream.nullInputStream()
+    for ((i, stage) in stages.withIndex()) {
+      val isLast = i == stages.lastIndex
+      val downstream: PipedOutputStream? = if (isLast) null else PipedOutputStream()
+      val nextStdin: InputStream =
+        if (downstream == null) InputStream.nullInputStream()
+        else PipedInputStream(downstream, 64 * 1024)
+      val stageStdin = stdin
+      val stageStdout = downstream?.let { PrintStream(it, true) }
+
+      threads += thread(isDaemon = true) {
+        try {
+          processLine(stage, stageStdin, stageStdout)
+        } finally {
+          stageStdout?.close()
+        }
+      }
+      stdin = nextStdin
+    }
+    threads.forEach { it.join() }
+  }
+
+  private fun processLine(line: ParsedCommand, stdin: InputStream, stdoutOverride: PrintStream?) {
     val (name, args) = line
     val shouldForkProcess = args.lastOrNull() == "&"
-    return if (shouldForkProcess) {
-      val jobNumber = jobsManager.nextJobNumber()
-
-      val process = ProcessBuilder( name, *args.dropLast(1).toTypedArray())
-        .directory(File(shellState.currentWorkingDirectory))
-        .redirectOutput(ProcessBuilder.Redirect.INHERIT)
-        .redirectError(ProcessBuilder.Redirect.INHERIT)
-        .start()
-      val displayed = (listOf(name) + args.dropLast(1)).joinToString(" ")
-      jobsManager.add(ProcessState(jobNumber, process.pid(), displayed, ProcessStatus.RUNNING))
-      process.onExit().thenRun { jobsManager.markDone(jobNumber) }
-      ExecutionResult(stdout = "[${jobNumber}] ${process.pid()}")
-    }
-    else {
-      resolveCommand(name)?.execute(name, args)
-        ?: ExecutionResult(stderr = "$name: command not found")
+    if (shouldForkProcess) {
+      forkBackground(name, args.dropLast(1))
+      return
     }
 
+    // Fast path: native command writing directly to the terminal — INHERIT so the
+    // child sees the real TTY instead of a JVM pipe, avoiding C stdio block-buffering.
+    if (stdoutOverride == null
+      && line.standardOutputDirection == OutputDirection.Print
+      && resolveBuiltin(name) == null
+      && pathUtil.getExecutablePath(name) != null
+    ) {
+      runNativeInherit(name, args, stdin, line.standardErrorDirection)
+      return
+    }
+
+    val stdout = stdoutOverride ?: openStream(line.standardOutputDirection, System.out)
+    val stderr = openStream(line.standardErrorDirection, System.err)
+    try {
+      val command = resolveCommand(name)
+      if (command == null) {
+        stderr.println("$name: command not found")
+      } else {
+        command.execute(name, args, stdin, stdout, stderr)
+      }
+    } finally {
+      stdout.flush()
+      if (stdoutOverride == null && line.standardOutputDirection is OutputDirection.File) stdout.close()
+      if (line.standardErrorDirection is OutputDirection.File) stderr.close()
+    }
   }
 
-  private fun emit(content: String?, direction: OutputDirection) {
-    when (direction) {
-      OutputDirection.Print -> content?.let(::println)
-      is OutputDirection.File -> {
-        val text = content?.let { "$it\n" } ?: ""
-        val file = File(direction.path)
-        if (direction.append) file.appendText(text) else file.writeText(text)
+  private fun runNativeInherit(
+    name: String,
+    args: List<String>,
+    stdin: InputStream,
+    stderrDirection: OutputDirection,
+  ) {
+    val process = ProcessBuilder(name, *args.toTypedArray())
+      .directory(File(shellState.currentWorkingDirectory))
+      .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+      .redirectError(redirectFor(stderrDirection))
+      .start()
+    thread(isDaemon = true) {
+      try {
+        pumpFlushed(stdin, process.outputStream)
+      } catch (_: Exception) {
+      } finally {
+        runCatching { process.outputStream.close() }
       }
     }
+    process.waitFor()
+  }
+
+  private fun forkBackground(name: String, args: List<String>) {
+    val jobNumber = jobsManager.nextJobNumber()
+    val process = ProcessBuilder(name, *args.toTypedArray())
+      .directory(File(shellState.currentWorkingDirectory))
+      .redirectOutput(ProcessBuilder.Redirect.INHERIT)
+      .redirectError(ProcessBuilder.Redirect.INHERIT)
+      .start()
+    val displayed = (listOf(name) + args).joinToString(" ")
+    jobsManager.add(ProcessState(jobNumber, process.pid(), displayed, ProcessStatus.RUNNING))
+    process.onExit().thenRun { jobsManager.markDone(jobNumber) }
+    println("[${jobNumber}] ${process.pid()}")
+  }
+
+  private fun openStream(direction: OutputDirection, default: PrintStream): PrintStream =
+    when (direction) {
+      OutputDirection.Print -> default
+      is OutputDirection.File -> PrintStream(FileOutputStream(File(direction.path), direction.append), true)
+    }
+
+  // process.outputStream is a BufferedOutputStream — copyTo would let bytes sit in
+  // the JVM buffer until it fills or close(). Flush after each chunk so streaming
+  // pipelines (e.g. tail -f | head) actually stream.
+  private fun pumpFlushed(src: InputStream, dst: java.io.OutputStream) {
+    val buf = ByteArray(4096)
+    while (true) {
+      val n = src.read(buf)
+      if (n < 0) break
+      dst.write(buf, 0, n)
+      dst.flush()
+    }
+  }
+
+  private fun redirectFor(direction: OutputDirection): ProcessBuilder.Redirect = when (direction) {
+    OutputDirection.Print -> ProcessBuilder.Redirect.INHERIT
+    is OutputDirection.File ->
+      if (direction.append) ProcessBuilder.Redirect.appendTo(File(direction.path))
+      else ProcessBuilder.Redirect.to(File(direction.path))
   }
 
   private fun cleanupJobs() {

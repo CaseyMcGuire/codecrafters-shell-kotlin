@@ -2,6 +2,8 @@ package command
 
 import ShellState
 import lib.PathUtil
+import java.io.InputStream
+import java.io.PrintStream
 import java.nio.file.Path
 
 class CdCommand(
@@ -10,7 +12,13 @@ class CdCommand(
 ) : Command {
   override val text = "cd"
 
-  override fun execute(name: String, args: List<String>): ExecutionResult {
+  override fun execute(
+    name: String,
+    args: List<String>,
+    stdin: InputStream,
+    stdout: PrintStream,
+    stderr: PrintStream,
+  ): Int {
     val path = args.firstOrNull()?.let {
       if (Path.of(it).isAbsolute)
         Path.of(it).normalize().toString()
@@ -18,13 +26,14 @@ class CdCommand(
         Path.of(it.replaceFirst("~", shellState.homeDirectory)).normalize().toString()
       else
         Path.of(shellState.currentWorkingDirectory).resolve(it).normalize().toString()
-    } ?: return ExecutionResult()
+    } ?: return 0
 
     return if (pathUtil.isValidPath(path)) {
       shellState.currentWorkingDirectory = path
-      ExecutionResult()
+      0
     } else {
-      ExecutionResult(stderr = "cd: $path: No such file or directory")
+      stderr.println("cd: $path: No such file or directory")
+      1
     }
   }
 }

@@ -1,5 +1,7 @@
 package command
 
+import java.io.InputStream
+import java.io.PrintStream
 import kotlin.system.exitProcess
 
 class ExitCommand(
@@ -7,7 +9,13 @@ class ExitCommand(
 ) : Command {
   override val text = "exit"
 
-  override fun execute(name: String, args: List<String>): ExecutionResult {
+  override fun execute(
+    name: String,
+    args: List<String>,
+    stdin: InputStream,
+    stdout: PrintStream,
+    stderr: PrintStream,
+  ): Int {
     exit(0)
   }
 }

@@ -1,11 +1,18 @@
 package command
 
+import java.io.InputStream
+import java.io.PrintStream
+
 interface Command {
   val text: String
-  fun execute(name: String, args: List<String>): ExecutionResult
+  fun execute(
+    name: String,
+    args: List<String>,
+    stdin: InputStream,
+    stdout: PrintStream,
+    stderr: PrintStream,
+  ): Int
 }
-
-data class ExecutionResult(val stdout: String? = null, val stderr: String? = null)
 
 data class ParsedCommand(
   val name: String,
