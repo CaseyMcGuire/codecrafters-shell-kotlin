@@ -13,6 +13,8 @@ import command.TypeCommand
 import lib.Parser
 import lib.PathUtil
 import lib.TerminalReader
+import org.jline.reader.History
+import org.jline.reader.impl.history.DefaultHistory
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -28,7 +30,7 @@ class Shell(
   private val doneJobCommand: Command = JobsCommand(jobsManager, doneOnly = true),
 ) {
   private val parser: Parser = Parser()
-  private val history = mutableListOf<String>()
+  private val history: History = DefaultHistory()
 
 
   val builtins: List<Command> = listOf(
@@ -39,7 +41,7 @@ class Shell(
     CdCommand(pathUtil, shellState),
     CompleteCommand(shellState),
     JobsCommand(jobsManager),
-    HistoryCommand(history),
+    HistoryCommand(),
   )
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
