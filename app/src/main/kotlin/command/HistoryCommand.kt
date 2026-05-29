@@ -1,9 +1,11 @@
 package command
 
+import org.jline.reader.History
+import java.io.File
 import java.io.InputStream
 import java.io.PrintStream
 
-class HistoryCommand(private val previousCommandProvider: () -> List<String>) : Command {
+class HistoryCommand(private val history: History) : Command {
   override val text = "history"
   override fun execute(
     name: String,
@@ -12,10 +14,15 @@ class HistoryCommand(private val previousCommandProvider: () -> List<String>) : 
     stdout: PrintStream,
     stderr: PrintStream
   ): Int {
-    val previousCommands = previousCommandProvider()
-    val limit = args.firstOrNull()?.toIntOrNull() ?: previousCommands.size
-    for (i in previousCommands.size - limit until previousCommands.size) {
-      stdout.println("    ${i + 1}  ${previousCommands[i]}")
+    if (args.firstOrNull() == "-r" && args.size >= 2) {
+      File(args[1]).readLines().forEach { history.add(it) }
+    }
+    else {
+      val previousCommands = history.map { it.line() }
+      val limit = args.firstOrNull()?.toIntOrNull() ?: previousCommands.size
+      for (i in previousCommands.size - limit until previousCommands.size) {
+        stdout.println("    ${i + 1}  ${previousCommands[i]}")
+      }
     }
     return 0
   }

@@ -41,7 +41,7 @@ class Shell(
     CdCommand(pathUtil, shellState),
     CompleteCommand(shellState),
     JobsCommand(jobsManager),
-    HistoryCommand { history.map { it.line() } },
+    HistoryCommand(history),
   )
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
