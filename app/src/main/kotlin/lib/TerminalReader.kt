@@ -3,6 +3,7 @@ package lib
 import ShellState
 import datastructures.Trie
 import org.jline.reader.EndOfFileException
+import org.jline.reader.History
 import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
 import org.jline.reader.Reference
@@ -21,6 +22,7 @@ class TerminalReader(
   private val terminal: Terminal = TerminalBuilder.builder().build(),
   private val shellState: ShellState,
   private val trie: Trie = Trie(completions.distinct()),
+  private val history: History,
 ) {
   private val reader: LineReader = buildReader()
   private val editor: LineEditor = JLineEditor(reader, terminal)
@@ -210,6 +212,7 @@ class TerminalReader(
     val reader = LineReaderBuilder.builder()
       .terminal(terminal)
       .parser(jlineParser)
+      .history(history)
       .option(LineReader.Option.AUTO_LIST, false)
       .option(LineReader.Option.LIST_AMBIGUOUS, true)
       .build()

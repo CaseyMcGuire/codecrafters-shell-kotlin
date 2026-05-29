@@ -3,7 +3,7 @@ package command
 import java.io.InputStream
 import java.io.PrintStream
 
-class HistoryCommand(private val previousCommands: List<String>) : Command {
+class HistoryCommand(private val previousCommandProvider: () -> List<String>) : Command {
   override val text = "history"
   override fun execute(
     name: String,
@@ -12,6 +12,7 @@ class HistoryCommand(private val previousCommands: List<String>) : Command {
     stdout: PrintStream,
     stderr: PrintStream
   ): Int {
+    val previousCommands = previousCommandProvider()
     val limit = args.firstOrNull()?.toIntOrNull() ?: previousCommands.size
     for (i in previousCommands.size - limit until previousCommands.size) {
       stdout.println("    ${i + 1}  ${previousCommands[i]}")

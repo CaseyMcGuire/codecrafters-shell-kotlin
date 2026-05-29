@@ -41,7 +41,7 @@ class Shell(
     CdCommand(pathUtil, shellState),
     CompleteCommand(shellState),
     JobsCommand(jobsManager),
-    HistoryCommand(),
+    HistoryCommand { history.map { it.line() } },
   )
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
@@ -64,12 +64,12 @@ class Shell(
     val terminalReader = TerminalReader(
       completions = pathUtil.executablesOnPath + builtins.map { it.text },
       shellState = shellState,
+      history = history,
     )
 
     while (true) {
       doneJobCommand.execute("jobs", emptyList(), InputStream.nullInputStream(), System.out, System.err)
       val line = terminalReader.readLine("$ ") ?: break
-      history += line
       val parsedCommands = parser.parse(line)
       runPipeline(parsedCommands)
     }
