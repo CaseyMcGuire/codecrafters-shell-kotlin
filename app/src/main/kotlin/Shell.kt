@@ -3,6 +3,7 @@ import command.Command
 import command.CompleteCommand
 import command.EchoCommand
 import command.ExitCommand
+import command.HistoryCommand
 import command.JobsCommand
 import command.NativeCommand
 import command.OutputDirection
@@ -37,6 +38,7 @@ class Shell(
     CdCommand(pathUtil, shellState),
     CompleteCommand(shellState),
     JobsCommand(jobsManager),
+    HistoryCommand()
   )
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
