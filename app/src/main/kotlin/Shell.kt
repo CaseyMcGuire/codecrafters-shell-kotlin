@@ -57,6 +57,8 @@ class Shell(
 
   fun parse(line: String): ParsedCommand = parser.parse(line).single()
 
+  fun runLine(line: String) = runPipeline(parser.parse(line))
+
   fun run() {
     val shutdownHook = Thread { cleanupJobs() }
     Runtime.getRuntime().addShutdownHook(shutdownHook)
