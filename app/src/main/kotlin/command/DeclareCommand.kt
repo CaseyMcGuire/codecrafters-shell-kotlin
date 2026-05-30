@@ -1,9 +1,10 @@
 package command
 
+import ShellState
 import java.io.InputStream
 import java.io.PrintStream
 
-class DeclareCommand : Command {
+class DeclareCommand(private val shellState: ShellState) : Command {
   override val text = "declare"
   override fun execute(
     name: String,
@@ -13,7 +14,18 @@ class DeclareCommand : Command {
     stderr: PrintStream
   ): Int {
     if (args.firstOrNull() == "-p") {
-      stdout.println("declare: ${args.getOrNull(1)}: not found")
+      val variableName = args.getOrNull(1)
+      val variableValue = shellState.variables[variableName]
+      if (variableValue != null) {
+        stdout.println("declare -- ${variableName}=\"${variableValue}\"")
+      }
+      else {
+        stdout.println("declare: ${variableName}: not found")
+      }
+    }
+    else {
+      args.map { it.split("=") }
+        .forEach { shellState.variables[it[0]] = it[1] }
     }
     return 0
   }

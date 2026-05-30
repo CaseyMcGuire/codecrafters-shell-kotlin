@@ -54,7 +54,7 @@ class Shell(
     CompleteCommand(shellState),
     JobsCommand(jobsManager),
     historyCommand,
-    DeclareCommand()
+    DeclareCommand(shellState),
   )
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
