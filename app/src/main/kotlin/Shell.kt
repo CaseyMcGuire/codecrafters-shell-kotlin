@@ -32,6 +32,10 @@ class Shell(
   private val parser: Parser = Parser()
   private val history: History = DefaultHistory()
 
+  init {
+    File(System.getenv("HISTFILE")).forEachLine { history.add(it) }
+  }
+
 
   val builtins: List<Command> = listOf(
     EchoCommand(),
