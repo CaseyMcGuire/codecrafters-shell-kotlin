@@ -33,9 +33,11 @@ class Shell(
   private val history: History = DefaultHistory()
 
   init {
-    val historyFile = File(System.getenv("HISTFILE"))
-    if (historyFile.exists()) {
-      historyFile.forEachLine { history.add(it) }
+    System.getenv("HISTFILE")?.let {
+      val historyFile = File(it)
+      if (historyFile.exists()) {
+        historyFile.forEachLine { history.add(it) }
+      }
     }
   }
 
