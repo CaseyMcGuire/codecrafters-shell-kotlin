@@ -28,12 +28,13 @@ class Shell(
   private val shellState: ShellState = ShellState(),
   private val jobsManager: JobsManager = JobsManager(),
   private val doneJobCommand: Command = JobsCommand(jobsManager, doneOnly = true),
+  private val histFile: String? = System.getenv("HISTFILE"),
 ) {
   private val parser: Parser = Parser()
   private val history: History = DefaultHistory()
 
   init {
-    System.getenv("HISTFILE")?.let {
+    histFile?.let {
       val historyFile = File(it)
       if (historyFile.exists()) {
         historyFile.forEachLine { line -> history.add(line) }
@@ -213,8 +214,8 @@ class Shell(
     jobsManager.destroyAliveProcesses()
   }
 
-  private fun writeHistoryFile() {
-    System.getenv("HISTFILE")?.let {
+  fun writeHistoryFile() {
+    histFile?.let {
       historyCommand.execute("history", listOf("-w", it), InputStream.nullInputStream(), System.out, System.err)
     }
   }
