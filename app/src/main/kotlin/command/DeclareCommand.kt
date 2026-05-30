@@ -12,6 +12,9 @@ class DeclareCommand : Command {
     stdout: PrintStream,
     stderr: PrintStream
   ): Int {
+    if (args.firstOrNull() == "-p") {
+      stdout.println("declare: ${args.getOrNull(1)}: not found")
+    }
     return 0
   }
 }
