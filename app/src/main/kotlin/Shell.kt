@@ -71,6 +71,8 @@ class Shell(
   fun run() {
     val shutdownHook = Thread { cleanupJobs() }
     Runtime.getRuntime().addShutdownHook(shutdownHook)
+    val historyFileHook = Thread { writeHistoryFile() }
+    Runtime.getRuntime().addShutdownHook(historyFileHook)
 
     val terminalReader = TerminalReader(
       completions = pathUtil.executablesOnPath + builtins.map { it.text },
@@ -208,5 +210,14 @@ class Shell(
 
   private fun cleanupJobs() {
     jobsManager.destroyAliveProcesses()
+  }
+
+  private fun writeHistoryFile() {
+    System.getenv("HISTFILE")?.let {
+      val file = File(it)
+      history.forEach { line ->
+        file.appendText("${line.line()}\n")
+      }
+    }
   }
 }
