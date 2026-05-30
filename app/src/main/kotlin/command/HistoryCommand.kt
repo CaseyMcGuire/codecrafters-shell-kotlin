@@ -25,6 +25,7 @@ class HistoryCommand(private val history: History) : Command {
       }
 
       file.writeText(history.joinToString("\n") { it.line() })
+      file.appendText("\n")
     }
     else if (args.firstOrNull() == "-a") {
       val file = File(args[1])
