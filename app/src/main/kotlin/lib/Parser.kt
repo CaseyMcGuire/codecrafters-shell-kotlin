@@ -101,13 +101,13 @@ class Parser(private val shellState: ShellState) {
 
     return ParsedCommand(
       commandName,
-      args.map(::replaceVariables),
+      args.map(::replaceVariables).filterNotNull(),
       stdOut,
       stdErr,
     )
   }
 
-  private fun replaceVariables(str: String): String {
+  private fun replaceVariables(str: String): String? {
     val builder = StringBuilder()
     var variableBuilder = StringBuilder()
     var inVariable = false
@@ -146,7 +146,7 @@ class Parser(private val shellState: ShellState) {
       replacement?.let { builder.append(it) }
     }
 
-    return builder.toString()
+    return if (builder.isEmpty()) null else builder.toString()
   }
 
   private enum class ParseState {
