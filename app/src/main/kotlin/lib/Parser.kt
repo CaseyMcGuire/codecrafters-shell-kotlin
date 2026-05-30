@@ -108,9 +108,14 @@ class Parser(private val shellState: ShellState) {
   }
 
   private fun replaceVariable(str: String): String {
-    if (str.startsWith("$")) {
-      val variableValue = shellState.variables[str.substring(1)]
-      return variableValue ?: str
+    val indexOfVariable = str.indexOf('$')
+    if (indexOfVariable >= 0) {
+      val variableValue = shellState.variables[str.substring(indexOfVariable + 1)]
+      return if (variableValue != null) {
+        "${str.substring(0, indexOfVariable)}${variableValue}"
+      } else {
+        str
+      }
     }
     else {
       return str
