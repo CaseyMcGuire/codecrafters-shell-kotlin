@@ -7,6 +7,7 @@ import java.io.PrintStream
 
 class HistoryCommand(private val history: History) : Command {
   override val text = "history"
+  private var index = 0
   override fun execute(
     name: String,
     args: List<String>,
@@ -23,9 +24,18 @@ class HistoryCommand(private val history: History) : Command {
         file.createNewFile()
       }
 
-      for (line in history.map { it.line() }) {
-        file.appendText("$line\n")
+      file.writeText(history.joinToString("\n") { it.line() })
+    }
+    else if (args.firstOrNull() == "-a") {
+      val file = File(args[1])
+      if (!file.exists()) {
+        file.createNewFile()
       }
+      val historyLines = history.map { it.line() }
+      for (i in index until historyLines.size) {
+        file.appendText("${historyLines[i]}\n")
+      }
+      index = historyLines.size
     }
     else {
       val previousCommands = history.map { it.line() }
