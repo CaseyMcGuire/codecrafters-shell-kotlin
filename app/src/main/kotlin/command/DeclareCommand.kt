@@ -25,7 +25,16 @@ class DeclareCommand(private val shellState: ShellState) : Command {
     }
     else {
       args.map { it.split("=") }
-        .forEach { shellState.variables[it[0]] = it[1] }
+        .forEach {
+          val variableName = it[0]
+          val variableValue = it[1]
+          if (variableName.first() == '_' || variableName.first().isLetter()) {
+            shellState.variables[variableName] = variableValue
+          }
+          else {
+            stderr.println("declare: `${variableName}:${variableValue}`: not a valid identifier")
+          }
+        }
     }
     return 0
   }
