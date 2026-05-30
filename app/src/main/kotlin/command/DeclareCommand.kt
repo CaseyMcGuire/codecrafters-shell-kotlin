@@ -28,7 +28,9 @@ class DeclareCommand(private val shellState: ShellState) : Command {
         .forEach {
           val variableName = it[0]
           val variableValue = it[1]
-          if (variableName.first() == '_' || variableName.first().isLetter()) {
+          val hasValidCharacters = variableName.all { c -> c.isLetterOrDigit() || c == '_' }
+          val hasValidStartCharacter = variableName.first() == '_' || variableName.first().isLetter()
+          if (hasValidCharacters && hasValidStartCharacter) {
             shellState.variables[variableName] = variableValue
           }
           else {
