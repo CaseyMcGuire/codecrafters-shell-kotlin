@@ -27,7 +27,7 @@ class HistoryCommand(private val history: History) : Command {
       file.writeText(history.joinToString("\n") { it.line() })
       file.appendText("\n")
     }
-    else if (args.firstOrNull() == "-a") {
+    else if (args.firstOrNull() == "-a" && args.size >= 2) {
       val file = File(args[1])
       if (!file.exists()) {
         file.createNewFile()
@@ -41,7 +41,8 @@ class HistoryCommand(private val history: History) : Command {
     else {
       val previousCommands = history.map { it.line() }
       val limit = args.firstOrNull()?.toIntOrNull() ?: previousCommands.size
-      for (i in previousCommands.size - limit until previousCommands.size) {
+      val start = (previousCommands.size - limit).coerceAtLeast(0)
+      for (i in start until previousCommands.size) {
         stdout.println("    ${i + 1}  ${previousCommands[i]}")
       }
     }

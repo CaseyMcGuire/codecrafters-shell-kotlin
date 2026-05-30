@@ -54,6 +54,20 @@ class HistoryCommandTest {
   }
 
   @Test
+  fun `a numeric arg larger than the history lists everything`() {
+    val (history, _) = historyWith("one", "two")
+    val result = history.runCaptured("history", listOf("99"))
+
+    assertEquals(
+      """
+      |    1  one
+      |    2  two
+      """.trimMargin(),
+      result.stdout,
+    )
+  }
+
+  @Test
   fun `a non-numeric arg falls back to listing everything`() {
     val (history, _) = historyWith("one", "two")
     val result = history.runCaptured("history", listOf("not-a-number"))
@@ -88,6 +102,17 @@ class HistoryCommandTest {
 
     assertEquals(true, target.exists())
     assertEquals(listOf("one"), target.readLines())
+  }
+
+  @Test
+  fun `-w overwrites existing file contents rather than appending`(@TempDir dir: File) {
+    val (history, _) = historyWith("new one", "new two")
+    val target = File(dir, "histfile")
+    target.writeText("stale\nlines\n")
+
+    history.runCaptured("history", listOf("-w", target.absolutePath))
+
+    assertEquals(listOf("new one", "new two"), target.readLines())
   }
 
   @Test
@@ -126,5 +151,81 @@ class HistoryCommandTest {
     val result = history.runCaptured("history", listOf("-w"))
 
     assertEquals("    1  one", result.stdout)
+  }
+
+  @Test
+  fun `-a without a filename falls back to listing`() {
+    val (history, _) = historyWith("one")
+    val result = history.runCaptured("history", listOf("-a"))
+
+    assertEquals("    1  one", result.stdout)
+  }
+
+  // The `-a` flag appends only the commands added since the command was constructed.
+  // historyWith(...) seeds entries *before* constructing HistoryCommand, modelling the
+  // history loaded at startup, which `-a` treats as already saved. Commands added to the
+  // returned backing History afterward model commands typed during the session.
+
+  @Test
+  fun `-a appends only commands added since the command was created`(@TempDir dir: File) {
+    val (history, backing) = historyWith("startup one", "startup two")
+    val target = File(dir, "histfile")
+    backing.add("typed one")
+    backing.add("typed two")
+
+    val result = history.runCaptured("history", listOf("-a", target.absolutePath))
+
+    assertEquals(0, result.exitCode)
+    assertEquals(listOf("typed one", "typed two"), target.readLines())
+  }
+
+  @Test
+  fun `-a appends only commands new since the previous -a call`(@TempDir dir: File) {
+    val (history, backing) = historyWith()
+    val target = File(dir, "histfile")
+
+    backing.add("first")
+    history.runCaptured("history", listOf("-a", target.absolutePath))
+
+    backing.add("second")
+    history.runCaptured("history", listOf("-a", target.absolutePath))
+
+    assertEquals(listOf("first", "second"), target.readLines())
+  }
+
+  @Test
+  fun `-a appends to existing file contents rather than overwriting`(@TempDir dir: File) {
+    val (history, backing) = historyWith()
+    val target = File(dir, "histfile")
+    target.writeText("pre-existing\n")
+    backing.add("appended")
+
+    history.runCaptured("history", listOf("-a", target.absolutePath))
+
+    assertEquals(listOf("pre-existing", "appended"), target.readLines())
+  }
+
+  @Test
+  fun `-a creates the file when it does not exist`(@TempDir dir: File) {
+    val (history, backing) = historyWith()
+    val target = File(dir, "new-histfile")
+    assertEquals(false, target.exists())
+    backing.add("entry")
+
+    history.runCaptured("history", listOf("-a", target.absolutePath))
+
+    assertEquals(true, target.exists())
+    assertEquals(listOf("entry"), target.readLines())
+  }
+
+  @Test
+  fun `-a appends nothing when there are no new commands since the checkpoint`(@TempDir dir: File) {
+    val (history, _) = historyWith("already saved")
+    val target = File(dir, "histfile")
+    target.writeText("existing\n")
+
+    history.runCaptured("history", listOf("-a", target.absolutePath))
+
+    assertEquals(listOf("existing"), target.readLines())
   }
 }
