@@ -140,8 +140,10 @@ class Parser(private val shellState: ShellState) {
       }
 
     }
+
     if (variableBuilder.isNotEmpty()) {
-      builder.append(variableBuilder)
+      val replacement = shellState.variables[variableBuilder.toString()]
+      replacement?.let { builder.append(it) }
     }
 
     return builder.toString()
