@@ -36,11 +36,12 @@ class Shell(
     System.getenv("HISTFILE")?.let {
       val historyFile = File(it)
       if (historyFile.exists()) {
-        historyFile.forEachLine { history.add(it) }
+        historyFile.forEachLine { line -> history.add(line) }
       }
     }
   }
 
+  val historyCommand = HistoryCommand(history)
 
   val builtins: List<Command> = listOf(
     EchoCommand(),
@@ -50,7 +51,7 @@ class Shell(
     CdCommand(pathUtil, shellState),
     CompleteCommand(shellState),
     JobsCommand(jobsManager),
-    HistoryCommand(history),
+    historyCommand,
   )
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
@@ -214,10 +215,7 @@ class Shell(
 
   private fun writeHistoryFile() {
     System.getenv("HISTFILE")?.let {
-      val file = File(it)
-      history.forEach { line ->
-        file.appendText("${line.line()}\n")
-      }
+      historyCommand.execute("history", listOf("-w", it), InputStream.nullInputStream(), System.out, System.err)
     }
   }
 }

@@ -7,7 +7,7 @@ import java.io.PrintStream
 
 class HistoryCommand(private val history: History) : Command {
   override val text = "history"
-  private var index = 0
+  private var index = history.size()
   override fun execute(
     name: String,
     args: List<String>,
