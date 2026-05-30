@@ -32,7 +32,7 @@ class DeclareCommand(private val shellState: ShellState) : Command {
             shellState.variables[variableName] = variableValue
           }
           else {
-            stderr.println("declare: `${variableName}:${variableValue}': not a valid identifier")
+            stderr.println("declare: `${variableName}=${variableValue}': not a valid identifier")
           }
         }
     }
