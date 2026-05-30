@@ -101,25 +101,50 @@ class Parser(private val shellState: ShellState) {
 
     return ParsedCommand(
       commandName,
-      args.map(::replaceVariable),
+      args.map(::replaceVariables),
       stdOut,
       stdErr,
     )
   }
 
-  private fun replaceVariable(str: String): String {
-    val indexOfVariable = str.indexOf('$')
-    if (indexOfVariable >= 0) {
-      val variableValue = shellState.variables[str.substring(indexOfVariable + 1)]
-      return if (variableValue != null) {
-        "${str.substring(0, indexOfVariable)}${variableValue}"
-      } else {
-        str
+  private fun replaceVariables(str: String): String {
+    val builder = StringBuilder()
+    var variableBuilder = StringBuilder()
+    var inVariable = false
+
+    val append = { c: Char ->
+      if (inVariable) variableBuilder.append(c)
+      else builder.append(c)
+    }
+    for (i in str.indices) {
+      val c = str[i]
+      if (c == '$') {
+        inVariable = true
       }
+      else if (c == '{') {
+        if (inVariable) {
+          continue
+        }
+        else {
+          append(c)
+        }
+      }
+      else if (c == '}') {
+        val replacement = shellState.variables[variableBuilder.toString()]
+        replacement?.let { builder.append(it) }
+        variableBuilder = StringBuilder()
+        inVariable = false
+      }
+      else {
+        append(c)
+      }
+
     }
-    else {
-      return str
+    if (variableBuilder.isNotEmpty()) {
+      builder.append(variableBuilder)
     }
+
+    return builder.toString()
   }
 
   private enum class ParseState {
