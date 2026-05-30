@@ -1,9 +1,10 @@
 package lib
 
+import ShellState
 import command.OutputDirection
 import command.ParsedCommand
 
-class Parser {
+class Parser(private val shellState: ShellState) {
   fun parse(line: String): List<ParsedCommand> {
     val segments = mutableListOf<List<String>>()
     var tokens = mutableListOf<String>()
@@ -77,7 +78,7 @@ class Parser {
   private fun toParsedCommand(tokens: List<String>): ParsedCommand {
     val name = tokens.firstOrNull().orEmpty()
 
-    return when {
+    val (commandName, args, stdOut, stdErr) = when {
       tokens.getOrNull(tokens.size - 2) in setOf(">", "1>", "1>>", ">>") -> ParsedCommand(
         name,
         tokens.drop(1).dropLast(2),
@@ -96,6 +97,23 @@ class Parser {
         OutputDirection.Print,
         OutputDirection.Print,
       )
+    }
+
+    return ParsedCommand(
+      commandName,
+      args.map(::replaceVariable),
+      stdOut,
+      stdErr,
+    )
+  }
+
+  private fun replaceVariable(str: String): String {
+    if (str.startsWith("$")) {
+      val variableValue = shellState.variables[str.substring(1)]
+      return variableValue ?: str
+    }
+    else {
+      return str
     }
   }
 

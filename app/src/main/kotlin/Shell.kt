@@ -31,7 +31,7 @@ class Shell(
   private val doneJobCommand: Command = JobsCommand(jobsManager, doneOnly = true),
   private val histFile: String? = System.getenv("HISTFILE"),
 ) {
-  private val parser: Parser = Parser()
+  private val parser: Parser = Parser(shellState)
   private val history: History = DefaultHistory()
 
   init {
