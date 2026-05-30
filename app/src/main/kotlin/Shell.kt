@@ -1,6 +1,7 @@
 import command.CdCommand
 import command.Command
 import command.CompleteCommand
+import command.DeclareCommand
 import command.EchoCommand
 import command.ExitCommand
 import command.HistoryCommand
@@ -53,6 +54,7 @@ class Shell(
     CompleteCommand(shellState),
     JobsCommand(jobsManager),
     historyCommand,
+    DeclareCommand()
   )
   private val byText: Map<String, Command> = builtins.associateBy { it.text }
 
